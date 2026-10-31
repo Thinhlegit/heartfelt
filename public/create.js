@@ -1,6 +1,6 @@
 const $ = id => document.getElementById(id);
 const t = (k, v) => i18n.t(k, v);
-const state = { relationship: 'love', occasion: 'love', media: null, mediaUrl: null, voice: null, voiceUrl: null, error: '' };
+const state = { relationship: 'love', occasion: 'love', design: 'classic', media: null, mediaUrl: null, voice: null, voiceUrl: null, error: '' };
 const MAX_REC_MS = 3 * 60 * 1000;
 
 i18n.apply();
@@ -25,6 +25,24 @@ function chips(container, items, key, label) {
 chips($('relChips'), HF.relationships, 'relationship', id => HF.relLabel(id));
 chips($('occChips'), HF.occasions, 'occasion', id => HF.occLabel(id));
 
+// ---- Design tiles (CSS mini-previews, themed by the page's --a/--b) ----
+const designTiles = $('designTiles');
+function drawDesigns() {
+  designTiles.innerHTML = HF.designs.map(d =>
+    `<button type="button" class="design-tile" data-id="${d.id}" aria-pressed="${d.id === state.design}">` +
+    `<span class="swatch sw-${d.id}"><i></i><b></b></span>${HF.esc(t('design.' + d.id))}</button>`
+  ).join('');
+}
+designTiles.addEventListener('click', e => {
+  const btn = e.target.closest('.design-tile');
+  if (!btn) return;
+  state.design = btn.dataset.id;
+  designTiles.querySelectorAll('.design-tile').forEach(c => c.setAttribute('aria-pressed', c === btn));
+  render();
+});
+drawDesigns();
+i18n.onChange(drawDesigns);
+
 // ---- Live preview ----
 function render() {
   const occ = HF.occasion(state.occasion);
@@ -35,6 +53,7 @@ function render() {
     from: $('from').value.trim(),
     message: $('message').value.trim() || (state.media || state.voice ? '' : t('create.previewMessage')),
     occasion: state.occasion,
+    design: state.design,
     relationship: state.relationship,
     media: state.media ? { url: state.mediaUrl, kind: state.media.type.startsWith('video') ? 'video' : 'image' } : null,
     voice: state.voice ? { url: state.voiceUrl } : null,
@@ -169,6 +188,7 @@ $('form').addEventListener('submit', async e => {
   fd.append('message', message);
   fd.append('relationship', state.relationship);
   fd.append('occasion', state.occasion);
+  fd.append('design', state.design);
   fd.append('lang', i18n.lang);
   fd.append('isPublic', $('isPublic').checked);
   if (state.media) fd.append('media', state.media);

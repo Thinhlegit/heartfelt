@@ -28,6 +28,7 @@ function saveCards() {
 
 // ---- Allowed choices ----
 const RELATIONSHIPS = ['love', 'family', 'parents', 'friend', 'coworker', 'teacher', 'other'];
+const DESIGNS = ['classic', 'polaroid', 'elegant', 'confetti', 'minimal', 'postcard'];
 const LANGS = ['en', 'vi'];
 const OCCASIONS = [
   'love', 'birthday', 'anniversary', 'congrats', 'thankyou',
@@ -86,6 +87,7 @@ app.post('/api/cards', upload.fields([{ name: 'media', maxCount: 1 }, { name: 'v
     from: clean(b.from, 60),
     relationship: RELATIONSHIPS.includes(b.relationship) ? b.relationship : 'other',
     occasion: OCCASIONS.includes(b.occasion) ? b.occasion : 'justbecause',
+    design: DESIGNS.includes(b.design) ? b.design : 'classic',
     message: clean(b.message, 2000),
     lang: LANGS.includes(b.lang) ? b.lang : 'en',
     isPublic: b.isPublic === 'true' || b.isPublic === 'on',

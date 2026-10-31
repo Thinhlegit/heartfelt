@@ -19,6 +19,15 @@ window.HF = {
     { id: 'getwell', emoji: '🌻', particles: ['🌻', '🍀', '💚'], a: '#16a34a', b: '#bbf7d0' },
     { id: 'justbecause', emoji: '🌈', particles: ['🌈', '☀️', '💫'], a: '#0ea5e9', b: '#c4b5fd' },
   ],
+  designs: [
+    { id: 'classic', emoji: '💌' },
+    { id: 'polaroid', emoji: '📸' },
+    { id: 'elegant', emoji: '🥂' },
+    { id: 'confetti', emoji: '🎊' },
+    { id: 'minimal', emoji: '◻️' },
+    { id: 'postcard', emoji: '✉️' },
+  ],
+  design(id) { return this.designs.find(d => d.id === id) || this.designs[0]; },
   occasion(id) { return this.occasions.find(o => o.id === id) || this.occasions[7]; },
   relationship(id) { return this.relationships.find(r => r.id === id) || this.relationships[6]; },
   occLabel(id, lang) { return i18n.t('occ.' + this.occasion(id).id, null, lang); },
@@ -57,7 +66,7 @@ window.HF = {
       ? `<div class="badges"><span>${e(t('card.voiceBadge'))}</span></div>`
       : `<div class="voice"><div class="label">${e(t('card.voiceFrom', { from: c.from || t('card.me') }))}</div><audio src="${e(c.voice.url)}" controls></audio></div>`;
     return `
-      <div class="greeting" lang="${e(lang)}">
+      <div class="greeting design-${this.design(c.design).id}" lang="${e(lang)}">
         <div class="top">
           <div class="emoji">${occ.emoji}</div>
           <h2>${e(this.occTitle(occ.id, lang))}</h2>
