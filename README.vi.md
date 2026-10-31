@@ -26,6 +26,8 @@ cd heartfelt
 
 Mở http://localhost:3000. Vậy là xong.
 
+Trên Windows, hãy chạy các lệnh này trong WSL (Ubuntu).
+
 Script sẽ tạo tệp cài đặt (`.env`), tạo mã quản trị, rồi chạy Heartfelt bằng Docker, hoặc bằng Node.js 22+ nếu máy chưa có Docker. Chạy lại bao nhiêu lần cũng được; cài đặt và thiệp của bạn vẫn được giữ nguyên.
 
 ## Đưa lên mạng với HTTPS

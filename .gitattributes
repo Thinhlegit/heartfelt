@@ -1,0 +1,6 @@
+# Always check files out with LF line endings, even with Git for Windows (core.autocrlf=true).
+# CRLF breaks setup.sh ("bash\r: No such file or directory") and makes WSL see every file as modified.
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.ico binary

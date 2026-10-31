@@ -30,7 +30,7 @@ ok()   { printf '  \033[32m✓\033[0m %s\n' "$*"; }
 fail() { printf '  \033[31m✗\033[0m %s\n' "$*"; exit 1; }
 has()  { command -v "$1" >/dev/null 2>&1; }
 
-get_env() { grep -E "^$1=" .env | tail -1 | cut -d= -f2- || true; }
+get_env() { grep -E "^$1=" .env | tail -1 | cut -d= -f2- | tr -d '\r' || true; }
 set_env() {  # replace KEY=... in .env, or append it
   (umask 077; awk -v k="$1" -v v="$2" 'BEGIN{d=0} $0 ~ "^"k"=" {print k"="v; d=1; next} {print} END{if(!d) print k"="v}' .env > .env.tmp)
   mv .env.tmp .env
@@ -47,6 +47,12 @@ else
   ok "Using your existing .env"
 fi
 chmod 600 .env
+
+# A .env saved by a Windows editor has CRLF endings; strip them so values stay clean
+if grep -q "$(printf '\r')" .env; then
+  tr -d '\r' < .env > .env.tmp && mv .env.tmp .env && chmod 600 .env
+  ok "Fixed Windows line endings in .env"
+fi
 
 if [ -z "$(get_env ADMIN_TOKEN)" ]; then
   if has openssl; then token=$(openssl rand -hex 24)

@@ -7,7 +7,8 @@ const fs = require('fs');
 const path = require('path');
 
 // ---- Config (all optional, see README "Running in production") ----
-const env = process.env;
+// Trimmed, so a stray \r from a .env edited on Windows doesn't end up in a value
+const env = Object.fromEntries(Object.entries(process.env).map(([k, v]) => [k, String(v).trim()]));
 const PORT = env.PORT || 3000;
 const PROD = env.NODE_ENV === 'production';
 const TRUST_PROXY = env.TRUST_PROXY ? (/^\d+$/.test(env.TRUST_PROXY) ? Number(env.TRUST_PROXY) : env.TRUST_PROXY) : false;

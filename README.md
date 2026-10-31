@@ -26,6 +26,8 @@ cd heartfelt
 
 Open http://localhost:3000. That's it.
 
+On Windows, run these in WSL (Ubuntu).
+
 The script creates your settings file (`.env`), generates an admin token, and starts Heartfelt with Docker, or with Node.js 22+ if Docker isn't installed. It's safe to run again; your settings and cards are kept.
 
 ## Go live with HTTPS

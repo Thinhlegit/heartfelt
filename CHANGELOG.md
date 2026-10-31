@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Fixes
+- Windows/WSL: files are always checked out with Linux line endings, so `./setup.sh` runs and `git pull` isn't blocked by phantom changes
+- A `.env` edited in a Windows editor now works
+
 ## 1.0.1 — 2026-10-31
 
 ### Easier setup

@@ -130,6 +130,7 @@ for i in $(seq 12); do curl -s -o /dev/null -w "%{http_code} " -X POST $B/api/ca
 - **Docker build behind a TLS-inspecting proxy:** `npm ci` fails with `SELF_SIGNED_CERT_IN_CHAIN`. Pass the proxy CA as a secret: `docker build --network=host --secret id=ca,src=/path/ca.crt .` It isn't stored in the image.
 - **`COPY --from` resets ownership** to root. Writable dirs need `--chown=65532:65532` in the runtime stage.
 - **Docker env_file doesn't strip inline `# comments`.** Keep comments on their own lines in `.env.example`.
+- **Windows/WSL line endings:** `.gitattributes` forces LF. Without it, Git for Windows checks out CRLF, `setup.sh` fails with `bash\r: No such file or directory`, and WSL git shows every file as modified. Don't remove it.
 - **macOS bash 3.2:** in `setup.sh`, no empty arrays under `set -u`, no `sed -i`, no `${var,,}`.
 - **Playwright timing:** opening an extras panel scrolls smoothly; wait ~800 ms before reading bounding boxes. `canvas.toBlob` can take ~1 s headless (the signature now uses synchronous `toDataURL`).
 - **`pkill -f server.js` can kill your own shell** if the command line contains that string. Kill by PID.
