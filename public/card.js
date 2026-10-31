@@ -89,8 +89,7 @@ function showCard() {
   view = 'open';
   root.innerHTML = `<div class="reveal">${HF.renderCard(card)}</div><div class="actions" id="actions"></div>`;
   drawActions();
-  const occ = HF.occasion(card.occasion);
-  HF.confetti([occ.a, occ.b, '#ffffff', '#f3d36b']);
+  HF.playEffect(card.effect || 'confetti', HF.occasion(card.occasion));
   const v = root.querySelector('.media video');
   if (v) v.play().catch(() => {});
 }

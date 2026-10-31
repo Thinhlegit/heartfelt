@@ -15,6 +15,7 @@ const ADMIN_TOKEN = env.ADMIN_TOKEN || '';
 const MAX_STORAGE_BYTES = Number(env.MAX_STORAGE_MB || 2048) * 1024 * 1024;
 const REPORT_HIDE_AT = Number(env.REPORT_HIDE_AT || 3);
 const MAX_FILE_BYTES = 50 * 1024 * 1024;
+const MAX_SIGNATURE_BYTES = 512 * 1024;
 
 const DATA_FILE = path.join(__dirname, 'data', 'cards.json');
 const UPLOAD_DIR = path.join(__dirname, 'uploads');
@@ -45,6 +46,7 @@ let storageUsed = fs.readdirSync(UPLOAD_DIR).reduce((sum, f) => {
 const RELATIONSHIPS = ['love', 'family', 'parents', 'friend', 'coworker', 'teacher', 'other'];
 const DESIGNS = ['classic', 'polaroid', 'elegant', 'confetti', 'minimal', 'postcard'];
 const LANGS = ['en', 'vi'];
+const EFFECTS = ['confetti', 'fireworks', 'none'];
 const OCCASIONS = ['love', 'birthday', 'anniversary', 'congrats', 'thankyou', 'celebration', 'getwell', 'justbecause'];
 
 const ID_RE = /^[A-Za-z0-9_-]{8,16}$/;
@@ -55,6 +57,7 @@ const newId = () => crypto.randomBytes(9).toString('base64url'); // 72 bits: unl
 const CLAIMED = {
   media: /^(image\/(jpeg|png|gif|webp)|video\/(mp4|webm|quicktime))$/,
   voice: /^audio\/(webm|ogg|mp4|mpeg|wav|x-wav|wave|x-m4a|aac)(;|$)/,
+  signature: /^image\/png$/,
 };
 const EXT = {
   'image/jpeg': '.jpg', 'image/png': '.png', 'image/gif': '.gif', 'image/webp': '.webp',
@@ -73,6 +76,8 @@ function sniff(buf, field) {
     if (ascii(0, 4) === 'RIFF' && ascii(8, 12) === 'WEBP') return 'image/webp';
     if (isFtyp) return ascii(8, 12) === 'qt  ' ? 'video/quicktime' : 'video/mp4';
     if (isEbml) return 'video/webm';
+  } else if (field === 'signature') {
+    if (buf.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) return 'image/png';
   } else if (field === 'voice') {
     if (isEbml) return 'audio/webm';
     if (isFtyp) return 'audio/mp4';
@@ -111,7 +116,7 @@ const upload = multer({
     destination: UPLOAD_DIR,
     filename: (req, file, cb) => cb(null, 'tmp-' + crypto.randomBytes(12).toString('hex')),
   }),
-  limits: { fileSize: MAX_FILE_BYTES, files: 2, fields: 12, fieldSize: 16 * 1024, fieldNameSize: 32, parts: 14 },
+  limits: { fileSize: MAX_FILE_BYTES, files: 3, fields: 14, fieldSize: 16 * 1024, fieldNameSize: 32, parts: 17 },
   fileFilter: (req, file, cb) => {
     if (storageUsed + MAX_FILE_BYTES > MAX_STORAGE_BYTES) return cb(Object.assign(new Error('Storage full'), { code: 'storageFull' }));
     const ok = CLAIMED[file.fieldname]?.test(file.mimetype);
@@ -215,7 +220,7 @@ app.use('/uploads', (req, res, next) => {
   next();
 }, express.static(UPLOAD_DIR, { maxAge: '7d', index: false, dotfiles: 'deny', immutable: true }));
 
-const cardUpload = upload.fields([{ name: 'media', maxCount: 1 }, { name: 'voice', maxCount: 1 }]);
+const cardUpload = upload.fields([{ name: 'media', maxCount: 1 }, { name: 'voice', maxCount: 1 }, { name: 'signature', maxCount: 1 }]);
 
 app.post('/api/cards', createLimit, cardUpload, (req, res) => {
   const b = req.body;
@@ -227,11 +232,13 @@ app.post('/api/cards', createLimit, cardUpload, (req, res) => {
     relationship: RELATIONSHIPS.includes(b.relationship) ? b.relationship : 'other',
     occasion: OCCASIONS.includes(b.occasion) ? b.occasion : 'justbecause',
     design: DESIGNS.includes(b.design) ? b.design : 'classic',
+    effect: EFFECTS.includes(b.effect) ? b.effect : 'confetti',
     message: cleanMessage(b.message),
     lang: LANGS.includes(b.lang) ? b.lang : 'en',
     isPublic: b.isPublic === 'true',
     media: null,
     voice: null,
+    signature: null,
     hearts: 0,
     reports: 0,
     createdAt: new Date().toISOString(),
@@ -244,12 +251,17 @@ app.post('/api/cards', createLimit, cardUpload, (req, res) => {
 
   try {
     for (const f of Object.values(req.files || {}).flat()) {
+      if (f.fieldname === 'signature' && f.size > MAX_SIGNATURE_BYTES) {
+        removeUploads(req);
+        return res.status(413).json({ code: 'tooBig', error: 'Signature image is too large.' });
+      }
       const saved = finalizeUpload(f);
       if (!saved) {
         removeUploads(req);
         return res.status(400).json({ code: 'fileType', error: 'That file is not a supported photo, video or audio file.' });
       }
       if (f.fieldname === 'media') card.media = { url: saved.url, kind: saved.type.startsWith('video') ? 'video' : 'image' };
+      else if (f.fieldname === 'signature') card.signature = { url: saved.url };
       else card.voice = { url: saved.url };
     }
   } catch (err) {
@@ -304,7 +316,7 @@ app.delete('/api/cards/:id', (req, res) => {
   const isOwner = safeEqual(req.get('x-edit-token') || '', c.editToken);
   const isAdmin = ADMIN_TOKEN.length >= 16 && safeEqual(req.get('x-admin-token') || '', ADMIN_TOKEN);
   if (!isOwner && !isAdmin) return res.status(403).json({ code: 'forbidden', error: 'Not allowed' });
-  [c.media, c.voice].filter(Boolean).forEach(f => removeFile(path.join(UPLOAD_DIR, path.basename(f.url))));
+  [c.media, c.voice, c.signature].filter(Boolean).forEach(f => removeFile(path.join(UPLOAD_DIR, path.basename(f.url))));
   cards.delete(c.id);
   saveCards();
   if (isAdmin) console.warn(`[admin] deleted card ${c.id}`);

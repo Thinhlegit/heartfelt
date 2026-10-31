@@ -19,6 +19,7 @@ window.HF = {
     { id: 'classic' }, { id: 'polaroid' }, { id: 'elegant' },
     { id: 'confetti' }, { id: 'minimal' }, { id: 'postcard' },
   ],
+  effects: [{ id: 'confetti' }, { id: 'fireworks' }, { id: 'none' }],
   design(id) { return this.designs.find(d => d.id === id) || this.designs[0]; },
   occasion(id) { return this.occasions.find(o => o.id === id) || this.occasions[7]; },
   relationship(id) { return this.relationships.find(r => r.id === id) || this.relationships[6]; },
@@ -42,6 +43,9 @@ window.HF = {
       eye: '<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
       close: '<path d="M6 6l12 12M18 6 6 18"/>',
       arrow: '<path d="M5 12h14M13 6l6 6-6 6"/>',
+      pen: '<path d="M3 21c3-1 5-3 7-6l7-7a2.1 2.1 0 0 0-3-3l-7 7c-3 2-5 4-6 7"/><path d="M14 21h7"/>',
+      check: '<path d="m5 12 5 5 9-10"/>',
+      play: '<path d="M7 5v14l11-7z" fill="currentColor" stroke="none"/>',
     }[name] || '';
     return `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`;
   },
@@ -61,6 +65,76 @@ window.HF = {
     }
     document.body.appendChild(layer);
     setTimeout(() => layer.remove(), 5500);
+  },
+
+  // Fireworks on a full-screen canvas: rockets rise, then burst into falling sparks
+  fireworks(colors, bursts = 7) {
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const canvas = document.createElement('canvas');
+    canvas.className = 'fireworks-layer';
+    canvas.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(canvas);
+    const ctx = canvas.getContext('2d');
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const W = innerWidth, H = innerHeight;
+    canvas.width = W * dpr; canvas.height = H * dpr;
+    ctx.scale(dpr, dpr);
+
+    const rockets = [], sparks = [];
+    // Additive glow only reads well on dark backgrounds; on light paper, paint solid colour
+    const glow = matchMedia('(prefers-color-scheme: dark)').matches ? 'lighter' : 'source-over';
+    const pick = () => colors[Math.floor(Math.random() * colors.length)];
+    for (let i = 0; i < bursts; i++) {
+      rockets.push({
+        x: W * (0.15 + Math.random() * 0.7), y: H + 10,
+        vy: -(H * 0.011 + Math.random() * H * 0.004), apex: H * (0.15 + Math.random() * 0.3),
+        delay: i * 22 + Math.random() * 14, color: pick(),
+      });
+    }
+    function burst(r) {
+      const n = 56 + Math.floor(Math.random() * 28);
+      const speed = 2.2 + Math.random() * 1.8;
+      for (let i = 0; i < n; i++) {
+        const a = (i / n) * Math.PI * 2 + Math.random() * 0.2;
+        const v = speed * (0.55 + Math.random() * 0.45);
+        sparks.push({ x: r.x, y: r.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 1, decay: 0.012 + Math.random() * 0.01, color: Math.random() < 0.2 ? '#f3d36b' : r.color });
+      }
+    }
+    let frame = 0;
+    (function tick() {
+      frame++;
+      // Fade the previous frame so sparks leave short trails
+      ctx.globalCompositeOperation = 'destination-out';
+      ctx.fillStyle = 'rgba(0,0,0,0.22)';
+      ctx.fillRect(0, 0, W, H);
+      ctx.globalCompositeOperation = glow;
+      for (const r of rockets) {
+        if (r.done || frame < r.delay) continue;
+        r.y += r.vy;
+        ctx.fillStyle = r.color;
+        ctx.fillRect(r.x - 1, r.y, 2, 7);
+        if (r.y <= r.apex) { r.done = true; burst(r); }
+      }
+      for (const s of sparks) {
+        if (s.life <= 0) continue;
+        s.vx *= 0.985; s.vy = s.vy * 0.985 + 0.045;
+        s.x += s.vx; s.y += s.vy; s.life -= s.decay;
+        ctx.globalAlpha = Math.max(0, s.life);
+        ctx.fillStyle = s.color;
+        ctx.beginPath(); ctx.arc(s.x, s.y, 2.3 * (0.6 + s.life * 0.4), 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+      const busy = rockets.some(r => !r.done) || sparks.some(s => s.life > 0);
+      if (busy && frame < 600) requestAnimationFrame(tick);
+      else canvas.remove();
+    })();
+  },
+
+  // The opening effect a sender picked for their card
+  playEffect(effect, occ) {
+    if (effect === 'none') return;
+    if (effect === 'fireworks') return this.fireworks([occ.a, occ.b, '#f3d36b', '#ffffff']);
+    this.confetti([occ.a, occ.b, '#ffffff', '#f3d36b']);
   },
 
   // Card markup used by the live preview, the card page and the wall.
@@ -87,7 +161,9 @@ window.HF = {
           ${media}
           ${c.message ? `<div class="msg">${e(c.message)}</div>` : ''}
           ${voice}
-          ${c.from ? `<div class="from">${e(c.from)}</div>` : ''}
+          ${c.signature
+            ? `<div class="from signed"><img src="${e(c.signature.url)}" alt="${e(t('card.signedBy', { from: c.from || t('card.me') }))}"></div>`
+            : c.from ? `<div class="from">${e(c.from)}</div>` : ''}
         </div>
       </div>`;
   },

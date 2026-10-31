@@ -6,6 +6,11 @@ Make a card for your love, family, parents, friends or co-workers, then share it
 - **Pick the occasion**: Love message, Birthday, Anniversary, Congratulations, Thank you, Celebration, Get well, Just because (each has its own colours and floating emoji)
 - **Pick a card design**: Classic, Polaroid, Elegant, Confetti, Minimal or Postcard (a look that is separate from the occasion colours)
 - **Add content**: a text message, a photo or video (up to 50 MB), and/or a **voice message recorded in the browser** (or an uploaded audio file)
+- **Sign it by hand**: draw a signature with your finger or mouse; it appears on the card in place of your typed name
+- **Opening effect**: confetti, fireworks or nothing, played when the recipient opens the envelope (with a "Try it" preview)
+- **Calm, forgiving form**: photo, voice and signature stay folded away until you want them; drafts autosave on your device and your name is remembered; a live level meter shows the mic is picking you up
+- **Smooth motion** with the View Transitions API (preview morphs between styles, page changes cross-fade), all skipped when the device asks for reduced motion
+- **Accessible**: skip link, labelled errors, screen-reader announcements, keyboard-safe preview sheet, 44px touch targets, high-contrast and forced-colours support
 - **Starter lines** for each occasion when you don't know how to begin, and a live preview (full-screen sheet on phones)
 - **Share**: each card gets a link like `/c/AbC123`. The recipient sees a sealed envelope, taps to open it, and can send hearts back
 - **English and Vietnamese**: switch with the button in the top bar (auto-detected from the browser, or `?lang=vi`). Each card remembers the language it was written in, so the recipient sees it the way the sender wrote it
