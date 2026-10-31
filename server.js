@@ -125,7 +125,7 @@ const upload = multer({
 });
 
 // ---- Text cleanup: strip control and bidi-override characters, normalise ----
-const BAD_CHARS = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F‎‏‪-‮⁦-⁩]/g;
+const BAD_CHARS = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F\u200E\u200F\u202A-\u202E\u2066-\u2069]/g;
 const clean = (v, max) => String(v ?? '').normalize('NFC').replace(BAD_CHARS, '').replace(/\r\n?/g, '\n').trim().slice(0, max);
 const cleanLine = (v, max) => clean(v, max).replace(/\s+/g, ' ');
 const cleanMessage = v => clean(v, 2000).replace(/\n{4,}/g, '\n\n\n');
