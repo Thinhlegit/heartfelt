@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Heartfelt — send love, cheers & congrats</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,600;0,700;1,500&family=Nunito:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <nav class="nav">
+    <a class="brand" href="/">💌 Heartfelt</a>
+    <a class="link" href="/wall">Love wall →</a>
+  </nav>
+
+  <main class="wrap">
+    <header class="hero">
+      <h1>Say it so they feel it</h1>
+      <p>Make a card for your love, family, parents, friends or co-workers, with a photo or video, a note, or your own voice.</p>
+    </header>
+
+    <div class="grid">
+      <form id="form" class="panel" novalidate>
+        <section class="step">
+          <h3>1. Who is it for?</h3>
+          <div class="chips" id="relChips"></div>
+        </section>
+
+        <section class="step">
+          <h3>2. What's the occasion?</h3>
+          <div class="chips" id="occChips"></div>
+        </section>
+
+        <section class="step">
+          <h3>3. Names</h3>
+          <div class="row">
+            <label class="field"><span>To</span><input type="text" name="to" id="to" maxlength="60" placeholder="Mom, Linh, The team…" required></label>
+            <label class="field"><span>From</span><input type="text" name="from" id="from" maxlength="60" placeholder="Your name"></label>
+          </div>
+        </section>
+
+        <section class="step">
+          <h3>4. Your message <small>(optional if you add a photo or voice)</small></h3>
+          <textarea name="message" id="message" maxlength="2000" placeholder="Write something from the heart…"></textarea>
+          <div class="muted"><span id="count">0</span>/2000</div>
+        </section>
+
+        <section class="step">
+          <h3>5. Photo or video <small>(optional, up to 50 MB)</small></h3>
+          <div class="drop" id="drop" tabindex="0" role="button" aria-label="Choose a photo or video">
+            <div id="dropInner">📷 Tap to choose, or drag a photo/video here</div>
+          </div>
+          <input type="file" id="mediaInput" accept="image/jpeg,image/png,image/gif,image/webp,video/mp4,video/webm,video/quicktime" hidden>
+          <button type="button" class="small-btn" id="removeMedia" hidden>Remove</button>
+        </section>
+
+        <section class="step">
+          <h3>6. Your voice <small>(optional)</small></h3>
+          <div class="recorder">
+            <button type="button" class="rec-btn" id="recBtn" aria-label="Start recording">🎙️</button>
+            <div id="recStatus" class="muted">Tap to record a voice message (up to 3 minutes)</div>
+            <audio id="recPlayback" controls hidden></audio>
+          </div>
+          <div style="margin-top:8px">
+            <button type="button" class="small-btn" id="removeVoice" hidden>Delete recording</button>
+            <span class="muted" id="uploadVoiceWrap"> · or <label class="small-btn" style="cursor:pointer">upload an audio file<input type="file" id="voiceFile" accept="audio/*" hidden></label></span>
+          </div>
+        </section>
+
+        <label class="toggle">
+          <input type="checkbox" id="isPublic">
+          <span>Also show it on the public <b>Love wall</b><br><span class="muted">Otherwise only people with the link can see it.</span></span>
+        </label>
+
+        <button class="btn btn-block" id="submit" type="submit">Create my card 💌</button>
+        <div class="error" id="error" role="alert"></div>
+
+        <div class="share" id="share" hidden>
+          <b>Your card is ready! 🎉</b>
+          <div class="muted">Send this link to them:</div>
+          <div class="linkbox">
+            <input type="text" id="shareUrl" readonly>
+            <button type="button" class="btn" id="copyBtn">Copy</button>
+          </div>
+          <div class="actions" style="justify-content:flex-start">
+            <a class="btn ghost" id="openCard" target="_blank">Open card</a>
+            <button type="button" class="btn ghost" id="nativeShare" hidden>Share…</button>
+            <button type="button" class="btn ghost" id="another">Make another</button>
+          </div>
+        </div>
+      </form>
+
+      <aside>
+        <div class="preview-sticky">
+          <div class="muted" style="margin-bottom:8px">Live preview</div>
+          <div id="preview"></div>
+        </div>
+      </aside>
+    </div>
+  </main>
+
+  <script src="/themes.js"></script>
+  <script src="/create.js"></script>
+</body>
+</html>

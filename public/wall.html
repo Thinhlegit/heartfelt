@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Love wall 💞</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,600;0,700;1,500&family=Nunito:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <nav class="nav">
+    <a class="brand" href="/">💌 Heartfelt</a>
+    <a class="link" href="/">Make a card →</a>
+  </nav>
+  <main class="wrap">
+    <header class="hero">
+      <h1>The Love wall</h1>
+      <p>Messages people chose to share with the world.</p>
+    </header>
+    <div class="chips" id="filters" style="justify-content:center;margin-top:16px"></div>
+    <div class="wall" id="wall"></div>
+  </main>
+
+  <script src="/themes.js"></script>
+  <script>
+    let all = [], filter = 'all';
+    const filters = document.getElementById('filters');
+    const wall = document.getElementById('wall');
+
+    filters.innerHTML = [{ id: 'all', emoji: '💫', label: 'All' }, ...HF.occasions]
+      .map(o => `<button class="chip" data-id="${o.id}" aria-pressed="${o.id === 'all'}">${o.emoji} ${o.label}</button>`).join('');
+    filters.addEventListener('click', e => {
+      const b = e.target.closest('.chip'); if (!b) return;
+      filter = b.dataset.id;
+      filters.querySelectorAll('.chip').forEach(c => c.setAttribute('aria-pressed', c === b));
+      draw();
+    });
+
+    function draw() {
+      const list = filter === 'all' ? all : all.filter(c => c.occasion === filter);
+      wall.innerHTML = list.length ? list.map(c => {
+        const occ = HF.occasion(c.occasion);
+        return `<a href="/c/${encodeURIComponent(c.id)}" style="--a:${occ.a};--b:${occ.b}">
+          ${HF.renderCard(c, { compact: true })}
+        </a>`;
+      }).join('') : '<div class="empty" style="column-span:all">Nothing here yet. <a href="/">Be the first</a> 💌</div>';
+    }
+
+    fetch('/api/wall').then(r => r.json()).then(list => { all = list; draw(); });
+  </script>
+</body>
+</html>
