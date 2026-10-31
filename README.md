@@ -43,6 +43,42 @@ data/cards.json    Card storage (created automatically)
 uploads/           Uploaded photos, videos and voice notes
 ```
 
+## Docker
+
+A small, locked-down image: a multi-stage build that ends on Google's **distroless** Node 22 image, so there's no shell, no package manager and no OS tools, and it runs as a non-root user. About 50 MB compressed.
+
+```bash
+ADMIN_TOKEN=$(openssl rand -hex 24) docker compose up -d --build
+```
+
+The app is then on http://localhost:3000 (bound to this machine only; put an HTTPS proxy in front for the internet). Cards and uploads live in the `heartfelt-data` and `heartfelt-uploads` volumes, so they survive restarts and upgrades.
+
+What `docker-compose.yml` locks down:
+
+- read-only root filesystem (only the two volumes and a small `/tmp` are writable)
+- all Linux capabilities dropped, `no-new-privileges`
+- memory, CPU and process limits, and log rotation
+- health check on `/healthz`; `docker stop` shuts down cleanly
+
+What the `Dockerfile` does:
+
+- base images pinned by digest, so builds are reproducible (see the comment in the file for how to update them)
+- `npm ci --omit=dev --ignore-scripts`: exact lockfile versions, no dev dependencies, no install scripts
+- only `server.js`, `public/` and the package files are copied in (`.dockerignore` is an allow-list)
+- app code is owned by root and read-only to the app user
+
+Building behind a company proxy that inspects HTTPS? Pass its CA certificate as a build secret; it's used for `npm ci` and never stored in the image:
+
+```bash
+docker build --secret id=ca,src=/path/to/proxy-ca.crt -t heartfelt .
+```
+
+To back up the data:
+
+```bash
+docker run --rm -v heartfelt_heartfelt-data:/d -v heartfelt_heartfelt-uploads:/u -v "$PWD":/out busybox tar czf /out/heartfelt-backup.tgz -C / d u
+```
+
 ## Running in production
 
 Put it behind HTTPS (a reverse proxy such as Caddy or nginx, or a host like Render/Railway/Fly), then start it with:

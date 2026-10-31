@@ -209,6 +209,9 @@ app.use('/api', apiLimit, (req, res, next) => {
   next();
 });
 
+// Liveness check for Docker / load balancers
+app.get('/healthz', (req, res) => res.set('Cache-Control', 'no-store').json({ ok: true }));
+
 app.use(express.static(path.join(__dirname, 'public'), { index: 'index.html', dotfiles: 'ignore' }));
 
 // User uploads: never executable, never framed, only served by their generated names
@@ -371,3 +374,12 @@ app.use((err, req, res, next) => {
 const server = app.listen(PORT, () => console.log(`Heartfelt running at http://localhost:${PORT}${PROD ? ' (production)' : ''}`));
 server.requestTimeout = 120 * 1000; // slow uploads get cut off instead of holding connections open
 server.headersTimeout = 20 * 1000;
+
+// Docker sends SIGTERM on stop: finish in-flight requests, then exit
+for (const sig of ['SIGTERM', 'SIGINT']) {
+  process.on(sig, () => {
+    console.log(`${sig} received, shutting down`);
+    server.close(() => process.exit(0));
+    setTimeout(() => process.exit(1), 10 * 1000).unref();
+  });
+}

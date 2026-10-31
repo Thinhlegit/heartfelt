@@ -1,0 +1,36 @@
+# Run with:  ADMIN_TOKEN=$(openssl rand -hex 24) docker compose up -d --build
+services:
+  heartfelt:
+    build: .
+    image: heartfelt:latest
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3000:3000"   # only reachable from this machine; put an HTTPS proxy in front
+    environment:
+      NODE_ENV: production
+      TRUST_PROXY: "1"           # set to 0/remove if nothing sits in front of the container
+      ADMIN_TOKEN: ${ADMIN_TOKEN:-}
+      MAX_STORAGE_MB: "2048"
+    volumes:
+      - heartfelt-data:/app/data
+      - heartfelt-uploads:/app/uploads
+    # Hardening: nothing writable except the two volumes, no Linux capabilities,
+    # no privilege escalation, and resource caps so one container can't starve the host
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,mode=1777
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 100
+    mem_limit: 512m
+    cpus: 1.0
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  heartfelt-data:
+  heartfelt-uploads:
