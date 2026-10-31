@@ -6,7 +6,8 @@ Make a card for your love, family, parents, friends or co-workers, then share it
 - **Pick the occasion**: Love message, Birthday, Anniversary, Congratulations, Thank you, Celebration, Get well, Just because (each has its own colours and floating emoji)
 - **Pick a card design**: Classic, Polaroid, Elegant, Confetti, Minimal or Postcard (a look that is separate from the occasion colours)
 - **Add content**: a text message, a photo or video (up to 50 MB), and/or a **voice message recorded in the browser** (or an uploaded audio file)
-- **Share**: each card gets a link like `/c/AbC123`. The recipient sees an envelope, taps it to open, and can send hearts back
+- **Starter lines** for each occasion when you don't know how to begin, and a live preview (full-screen sheet on phones)
+- **Share**: each card gets a link like `/c/AbC123`. The recipient sees a sealed envelope, taps to open it, and can send hearts back
 - **English and Vietnamese**: switch with the button in the top bar (auto-detected from the browser, or `?lang=vi`). Each card remembers the language it was written in, so the recipient sees it the way the sender wrote it
 - **Love wall** (`/wall`): cards the sender chose to make public, filterable by occasion
 - The creator's browser keeps a private edit token, so they can delete their card later

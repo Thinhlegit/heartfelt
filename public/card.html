@@ -3,21 +3,27 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title data-i18n-title="card.pageTitle">A card for you 💌</title>
+  <meta name="theme-color" content="#f4efe6">
+  <title data-i18n-title="card.pageTitle">A card for you</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@600;700&family=Fraunces:ital,wght@0,600;0,700;1,500&family=Nunito:wght@400;700;800&display=swap&subset=vietnamese" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400;1,6..72,500&family=Dancing+Script:wght@600;700&display=swap&subset=vietnamese" rel="stylesheet">
   <link rel="stylesheet" href="/style.css">
 </head>
 <body>
-  <nav class="nav">
-    <a class="brand" href="/">💌 Heartfelt</a>
-    <div class="nav-links">
-      <button type="button" class="lang-toggle"></button>
-      <a class="link" href="/" data-i18n="nav.makeOwn">Make your own →</a>
-    </div>
-  </nav>
+  <header class="site">
+    <a class="brand" href="/">
+      <svg class="mark" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="15"/><path d="M16 23.5s-6.5-4-6.5-9a3.6 3.6 0 0 1 6.5-2.1 3.6 3.6 0 0 1 6.5 2.1c0 5-6.5 9-6.5 9z"/></svg>
+      <span>Heartfelt</span>
+    </a>
+    <nav>
+      <a href="/" data-i18n="nav.make">Write a card</a>
+      <div class="lang-switch" role="group" aria-label="Language"></div>
+    </nav>
+  </header>
   <main class="card-page" id="root">
-    <div class="empty" data-i18n="card.loading">Loading…</div>
+    <p class="empty" data-i18n="card.loading">Loading…</p>
   </main>
 
   <script src="/i18n.js"></script>
@@ -28,27 +34,34 @@
     const e = s => HF.esc(s);
     const root = document.getElementById('root');
     const id = location.pathname.split('/').pop();
+    const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
     let card = null, view = 'loading', shareCopied = false;
 
     // The card itself stays in the sender's language; buttons and hints follow the viewer's
     function draw() {
       if (view === 'missing') {
-        root.innerHTML = `<div class="empty"><h2>${e(t('card.notFound'))}</h2><p>${e(t('card.notFoundBody'))}</p><a class="btn" href="/">${e(t('card.makeCard'))}</a></div>`;
+        root.innerHTML = `<div class="empty"><h1>${e(t('card.notFound'))}</h1><p>${e(t('card.notFoundBody'))}</p><a class="btn primary" href="/">${e(t('card.makeCard'))}</a></div>`;
       } else if (view === 'envelope') {
         const occ = HF.occasion(card.occasion);
         const cardT = (k, v) => i18n.t(k, v, card.lang);
-        document.title = `${HF.occTitle(occ.id, card.lang)}, ${card.to}! ${occ.emoji}`;
+        document.title = `${HF.occTitle(occ.id, card.lang)}, ${card.to}`;
         root.innerHTML = `
-          <div class="envelope" id="env" role="button" tabindex="0" aria-label="${e(t('card.openLabel'))}">
-            <div>
-              <div class="seal">${occ.emoji}</div>
-              <h2 style="margin:0" lang="${e(card.lang || 'en')}">${e(cardT('card.youHaveCard', { to: card.to }))}</h2>
-              <p class="muted">${card.from ? e(t('card.fromLine', { from: card.from })) : ''}${e(t('card.tapToOpen'))}</p>
-            </div>
+          <div class="stage">
+            <button type="button" class="envelope" id="env" aria-label="${e(t('card.openLabel'))}">
+              <span class="env-back"></span>
+              <span class="env-letter"></span>
+              <span class="env-front">
+                <span class="stamp" aria-hidden="true">${occ.emoji}</span>
+                <span class="address" lang="${e(card.lang || 'en')}">
+                  <span class="for">${e(cardT('card.envelopeFor', { to: card.to }))}</span>
+                  ${card.from ? `<span class="sender">${e(cardT('card.fromLine', { from: card.from }))}</span>` : ''}
+                </span>
+              </span>
+              <span class="env-flap"><span class="seal" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 19s-6-3.8-6-8.3A3.3 3.3 0 0 1 12 8.8a3.3 3.3 0 0 1 6 1.9C18 15.2 12 19 12 19z"/></svg></span></span>
+            </button>
+            <p class="hint">${e(t('card.tapToOpen'))}</p>
           </div>`;
-        const env = document.getElementById('env');
-        env.addEventListener('click', openCard);
-        env.addEventListener('keydown', ev => (ev.key === 'Enter' || ev.key === ' ') && openCard());
+        document.getElementById('env').addEventListener('click', openEnvelope);
       } else if (view === 'open') {
         drawActions();
       }
@@ -61,13 +74,14 @@
     function drawActions() {
       const token = editToken();
       document.getElementById('actions').innerHTML = `
-        <button class="btn heart-btn" id="heart">${e(t('card.sendLove'))} <span id="hc">${card.hearts || 0}</span></button>
-        <button class="btn ghost" id="share">${e(t(shareCopied ? 'card.linkCopied' : 'card.share'))}</button>
-        <a class="btn ghost" href="/">${e(t('card.makeBack'))}</a>
-        ${token ? `<button class="btn ghost" id="del">${e(t('card.delete'))}</button>` : ''}`;
+        <button type="button" class="btn primary heart-btn" id="heart">${HF.icon('heart')}<span>${e(t('card.sendLove'))}</span><span class="count" id="hc">${card.hearts || 0}</span></button>
+        <button type="button" class="btn" id="share">${HF.icon('share')}<span>${e(t(shareCopied ? 'card.linkCopied' : 'card.share'))}</span></button>
+        <a class="btn" href="/">${e(t('card.makeBack'))}</a>
+        ${token ? `<button type="button" class="text-btn danger" id="del">${e(t('card.delete'))}</button>` : ''}`;
 
-      document.getElementById('heart').addEventListener('click', async () => {
-        HF.burst(document.body, ['❤️'], 8);
+      const heart = document.getElementById('heart');
+      heart.addEventListener('click', async () => {
+        heart.classList.remove('pop'); void heart.offsetWidth; heart.classList.add('pop');
         const r = await fetch(`/api/cards/${card.id}/heart`, { method: 'POST' });
         if (r.ok) {
           card.hearts = (await r.json()).hearts;
@@ -78,7 +92,7 @@
         if (navigator.share) return navigator.share({ title: document.title, url: location.href }).catch(() => {});
         await navigator.clipboard.writeText(location.href);
         shareCopied = true;
-        document.getElementById('share').textContent = t('card.linkCopied');
+        document.querySelector('#share span').textContent = t('card.linkCopied');
       });
       const del = document.getElementById('del');
       if (del) del.addEventListener('click', async () => {
@@ -88,11 +102,19 @@
       });
     }
 
-    function openCard() {
+    function openEnvelope() {
+      const env = document.getElementById('env');
+      if (env.classList.contains('open')) return;
+      env.classList.add('open');
+      setTimeout(showCard, reduceMotion ? 0 : 1100);
+    }
+
+    function showCard() {
       view = 'open';
       root.innerHTML = `<div class="reveal">${HF.renderCard(card)}</div><div class="actions" id="actions"></div>`;
       drawActions();
-      HF.burst(document.body, HF.occasion(card.occasion).particles, 30);
+      const occ = HF.occasion(card.occasion);
+      HF.confetti([occ.a, occ.b, '#ffffff', '#f3d36b']);
       const v = root.querySelector('.media video');
       if (v) v.play().catch(() => {});
     }

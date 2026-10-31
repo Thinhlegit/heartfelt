@@ -5,11 +5,11 @@ const MAX_REC_MS = 3 * 60 * 1000;
 
 i18n.apply();
 
-// ---- Chips ----
+// ---- Chips (occasion, relationship) ----
 function chips(container, items, key, label) {
   const draw = () => {
     container.innerHTML = items.map(i =>
-      `<button type="button" class="chip" data-id="${i.id}" aria-pressed="${i.id === state[key]}">${i.emoji} ${HF.esc(label(i.id))}</button>`
+      `<button type="button" class="chip" data-id="${i.id}" aria-pressed="${i.id === state[key]}">${HF.esc(label(i.id))}</button>`
     ).join('');
   };
   container.addEventListener('click', e => {
@@ -17,20 +17,21 @@ function chips(container, items, key, label) {
     if (!btn) return;
     state[key] = btn.dataset.id;
     container.querySelectorAll('.chip').forEach(c => c.setAttribute('aria-pressed', c === btn));
+    if (key === 'occasion') drawSuggest();
     render();
   });
   draw();
   i18n.onChange(draw);
 }
-chips($('relChips'), HF.relationships, 'relationship', id => HF.relLabel(id));
 chips($('occChips'), HF.occasions, 'occasion', id => HF.occLabel(id));
+chips($('relChips'), HF.relationships, 'relationship', id => HF.relLabel(id));
 
-// ---- Design tiles (CSS mini-previews, themed by the page's --a/--b) ----
+// ---- Design tiles (CSS mini-previews, themed by --a/--b) ----
 const designTiles = $('designTiles');
 function drawDesigns() {
   designTiles.innerHTML = HF.designs.map(d =>
     `<button type="button" class="design-tile" data-id="${d.id}" aria-pressed="${d.id === state.design}">` +
-    `<span class="swatch sw-${d.id}"><i></i><b></b></span>${HF.esc(t('design.' + d.id))}</button>`
+    `<span class="swatch sw-${d.id}"><i></i><b></b></span><span class="name">${HF.esc(t('design.' + d.id))}</span></button>`
   ).join('');
 }
 designTiles.addEventListener('click', e => {
@@ -43,10 +44,25 @@ designTiles.addEventListener('click', e => {
 drawDesigns();
 i18n.onChange(drawDesigns);
 
+// ---- Starter lines for the message ----
+function drawSuggest() {
+  const lines = [1, 2].map(n => t(`sug.${state.occasion}.${n}`));
+  $('suggest').innerHTML = `<span>${HF.esc(t('create.suggest'))}</span>` +
+    lines.map(l => `<button type="button" class="starter">${HF.esc(l)}</button>`).join('');
+}
+$('suggest').addEventListener('click', e => {
+  const b = e.target.closest('.starter');
+  if (!b) return;
+  const m = $('message');
+  m.value = m.value.trim() ? m.value.trimEnd() + '\n' + b.textContent : b.textContent;
+  m.focus();
+  m.setSelectionRange(m.value.length, m.value.length);
+  render();
+});
+
 // ---- Live preview ----
 function render() {
-  const occ = HF.occasion(state.occasion);
-  HF.applyTheme(document.documentElement, occ);
+  HF.applyTheme(document.documentElement, HF.occasion(state.occasion));
   $('preview').innerHTML = HF.renderCard({
     lang: i18n.lang,
     to: $('to').value.trim(),
@@ -62,20 +78,40 @@ function render() {
 }
 ['to', 'from', 'message'].forEach(id => $(id).addEventListener('input', render));
 
+// Phones: the preview opens as a full-screen sheet
+function drawPreviewButtons() {
+  $('openPreview').innerHTML = HF.icon('eye') + `<span>${HF.esc(t('create.showPreview'))}</span>`;
+  $('closePreview').innerHTML = HF.icon('close') + `<span>${HF.esc(t('create.closePreview'))}</span>`;
+}
+function setSheet(open) {
+  document.body.classList.toggle('sheet-open', open);
+  if (open) $('closePreview').focus(); else $('openPreview').focus();
+}
+$('openPreview').addEventListener('click', () => setSheet(true));
+$('closePreview').addEventListener('click', () => setSheet(false));
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && document.body.classList.contains('sheet-open')) setSheet(false); });
+
 // ---- Media ----
-function drawDrop() {
+function drawMedia() {
   const file = state.media;
-  $('dropInner').innerHTML = !file ? HF.esc(t('create.drop'))
-    : file.type.startsWith('video')
-      ? `<video src="${state.mediaUrl}" muted playsinline></video>${HF.esc(file.name)}`
-      : `<img src="${state.mediaUrl}" alt="">${HF.esc(file.name)}`;
+  $('drop').hidden = !!file;
+  $('mediaRow').hidden = !file;
+  $('drop').innerHTML = HF.icon('image') +
+    `<span><b>${HF.esc(t('create.dropTitle'))}</b><small>${HF.esc(t('create.dropHint'))}</small></span>`;
+  if (!file) return;
+  const thumb = file.type.startsWith('video')
+    ? `<video src="${state.mediaUrl}" muted playsinline></video>`
+    : `<img src="${state.mediaUrl}" alt="">`;
+  const size = file.size < 1024 * 1024 ? Math.max(1, Math.round(file.size / 1024)) + ' KB' : (file.size / 1024 / 1024).toFixed(1) + ' MB';
+  $('mediaRow').innerHTML = `${thumb}<span class="file-name">${HF.esc(file.name)}<small>${size}</small></span>` +
+    `<button type="button" class="text-btn" data-act="replace">${HF.esc(t('create.replace'))}</button>` +
+    `<button type="button" class="text-btn" data-act="remove">${HF.esc(t('create.remove'))}</button>`;
 }
 function setMedia(file) {
   if (state.mediaUrl) URL.revokeObjectURL(state.mediaUrl);
   state.media = file;
   state.mediaUrl = file ? URL.createObjectURL(file) : null;
-  drawDrop();
-  $('removeMedia').hidden = !file;
+  drawMedia();
   render();
 }
 function pickMedia(file) {
@@ -91,8 +127,12 @@ drop.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') 
 drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('over'); });
 drop.addEventListener('dragleave', () => drop.classList.remove('over'));
 drop.addEventListener('drop', e => { e.preventDefault(); drop.classList.remove('over'); pickMedia(e.dataTransfer.files[0]); });
-$('mediaInput').addEventListener('change', e => pickMedia(e.target.files[0]));
-$('removeMedia').addEventListener('click', () => { $('mediaInput').value = ''; setMedia(null); });
+$('mediaInput').addEventListener('change', e => { pickMedia(e.target.files[0]); e.target.value = ''; });
+$('mediaRow').addEventListener('click', e => {
+  const act = e.target.closest('[data-act]')?.dataset.act;
+  if (act === 'replace') $('mediaInput').click();
+  if (act === 'remove') { setMedia(null); drop.focus(); }
+});
 
 // ---- Voice recording ----
 let recorder = null, chunks = [], recTimer = null, recStart = 0;
@@ -101,7 +141,12 @@ function isRecording() { return recorder && recorder.state === 'recording'; }
 
 function drawRecStatus() {
   const recording = isRecording();
-  $('recBtn').setAttribute('aria-label', t(recording ? 'create.recStop' : 'create.recStart'));
+  const btn = $('recBtn');
+  btn.classList.toggle('recording', !!recording);
+  btn.innerHTML = HF.icon(recording ? 'stop' : 'mic');
+  btn.setAttribute('aria-label', t(recording ? 'create.recStop' : 'create.recStart'));
+  btn.hidden = !!state.voice && !recording;
+  $('recActions').hidden = !state.voice || recording;
   if (recording) {
     const s = Math.floor((Date.now() - recStart) / 1000);
     $('recStatus').textContent = t('create.recRunning', { time: `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}` });
@@ -116,7 +161,6 @@ function setVoice(blob) {
   state.voiceUrl = blob ? URL.createObjectURL(blob) : null;
   $('recPlayback').hidden = !blob;
   if (blob) $('recPlayback').src = state.voiceUrl;
-  $('removeVoice').hidden = !blob;
   drawRecStatus();
   render();
 }
@@ -137,14 +181,11 @@ async function startRecording() {
     recorder.onstop = () => {
       stream.getTracks().forEach(t => t.stop());
       clearInterval(recTimer);
-      $('recBtn').classList.remove('recording');
-      $('recBtn').textContent = '🎙️';
       setVoice(new Blob(chunks, { type: (recorder.mimeType || 'audio/webm').split(';')[0] }));
     };
+    if (state.voice) setVoice(null);
     recorder.start();
     recStart = Date.now();
-    $('recBtn').classList.add('recording');
-    $('recBtn').textContent = '⏹';
     showError('');
     drawRecStatus();
     recTimer = setInterval(() => {
@@ -159,7 +200,8 @@ $('recBtn').addEventListener('click', () => {
   if (isRecording()) recorder.stop();
   else startRecording();
 });
-$('removeVoice').addEventListener('click', () => { $('voiceFile').value = ''; setVoice(null); });
+$('rerecord').addEventListener('click', startRecording);
+$('removeVoice').addEventListener('click', () => { $('voiceFile').value = ''; setVoice(null); $('recBtn').focus(); });
 $('voiceFile').addEventListener('change', e => {
   const f = e.target.files[0];
   if (!f) return;
@@ -179,7 +221,7 @@ $('form').addEventListener('submit', async e => {
   const to = $('to').value.trim();
   const message = $('message').value.trim();
   if (!to) { showError('err.noRecipient'); $('to').focus(); return; }
-  if (!message && !state.media && !state.voice) return showError('err.empty');
+  if (!message && !state.media && !state.voice) { showError('err.empty'); $('message').focus(); return; }
   if (isRecording()) return showError('err.stopFirst');
 
   const fd = new FormData();
@@ -204,15 +246,8 @@ $('form').addEventListener('submit', async e => {
     const res = await fetch('/api/cards', { method: 'POST', body: fd });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.code ? 'err.' + data.code : 'err.generic');
-    const url = location.origin + data.url;
     try { localStorage.setItem('hf-edit-' + data.id, data.editToken); } catch {}
-    $('shareUrl').value = url;
-    $('openCard').href = data.url;
-    $('nativeShare').hidden = !navigator.share;
-    $('share').hidden = false;
-    $('submit').hidden = true;
-    $('share').scrollIntoView({ behavior: 'smooth', block: 'center' });
-    HF.burst(document.body, HF.occasion(state.occasion).particles);
+    showDone(to, location.origin + data.url, data.url);
   } catch (err) {
     showError(err.message.startsWith('err.') ? err.message : 'err.generic');
   } finally {
@@ -221,11 +256,37 @@ $('form').addEventListener('submit', async e => {
   }
 });
 
+// ---- Done screen ----
+let doneTo = '';
+function drawDone() {
+  $('doneTitle').textContent = t('create.doneTitle', { to: doneTo });
+  $('copyBtn').innerHTML = HF.icon('link') + `<span>${HF.esc(t('create.copy'))}</span>`;
+  $('openCard').innerHTML = `<span>${HF.esc(t('create.openCard'))}</span>` + HF.icon('arrow');
+  $('nativeShare').innerHTML = HF.icon('share') + `<span>${HF.esc(t('create.share'))}</span>`;
+}
+function showDone(to, url, path) {
+  doneTo = to;
+  $('shareUrl').value = url;
+  $('openCard').href = path;
+  $('nativeShare').hidden = !navigator.share;
+  drawDone();
+  $('form').hidden = true;
+  $('done').hidden = false;
+  document.querySelector('.intro').hidden = true;
+  setSheet(false);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  $('doneTitle').setAttribute('tabindex', '-1');
+  $('doneTitle').focus({ preventScroll: true });
+  const occ = HF.occasion(state.occasion);
+  HF.confetti([occ.a, occ.b, '#ffffff']);
+}
+
 $('copyBtn').addEventListener('click', async () => {
   try { await navigator.clipboard.writeText($('shareUrl').value); } catch { $('shareUrl').select(); document.execCommand('copy'); }
-  $('copyBtn').textContent = t('create.copied');
-  setTimeout(() => ($('copyBtn').textContent = t('create.copy')), 1500);
+  $('copyBtn').querySelector('span').textContent = t('create.copied');
+  setTimeout(drawDone, 1600);
 });
+$('shareUrl').addEventListener('focus', e => e.target.select());
 $('nativeShare').addEventListener('click', () => {
   navigator.share({
     title: t('create.shareTitle'),
@@ -236,12 +297,17 @@ $('nativeShare').addEventListener('click', () => {
 $('another').addEventListener('click', () => location.reload());
 
 i18n.onChange(() => {
-  drawDrop();
+  drawMedia();
   drawRecStatus();
+  drawSuggest();
+  drawPreviewButtons();
+  if (doneTo) drawDone();
   showError(state.error);
   render();
 });
 
-drawDrop();
+drawMedia();
 drawRecStatus();
+drawSuggest();
+drawPreviewButtons();
 render();
