@@ -3,103 +3,107 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Heartfelt — send love, cheers & congrats</title>
+  <title data-i18n-title="create.pageTitle">Heartfelt: send love, cheers &amp; congrats</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,600;0,700;1,500&family=Nunito:wght@400;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,600;0,700;1,500&family=Nunito:wght@400;700;800&display=swap&subset=vietnamese" rel="stylesheet">
   <link rel="stylesheet" href="/style.css">
 </head>
 <body>
   <nav class="nav">
     <a class="brand" href="/">💌 Heartfelt</a>
-    <a class="link" href="/wall">Love wall →</a>
+    <div class="nav-links">
+      <button type="button" class="lang-toggle"></button>
+      <a class="link" href="/wall" data-i18n="nav.wall">Love wall →</a>
+    </div>
   </nav>
 
   <main class="wrap">
     <header class="hero">
-      <h1>Say it so they feel it</h1>
-      <p>Make a card for your love, family, parents, friends or co-workers, with a photo or video, a note, or your own voice.</p>
+      <h1 data-i18n="create.heading">Say it so they feel it</h1>
+      <p data-i18n="create.subtitle"></p>
     </header>
 
     <div class="grid">
       <form id="form" class="panel" novalidate>
         <section class="step">
-          <h3>1. Who is it for?</h3>
+          <h3 data-i18n="create.step1"></h3>
           <div class="chips" id="relChips"></div>
         </section>
 
         <section class="step">
-          <h3>2. What's the occasion?</h3>
+          <h3 data-i18n="create.step2"></h3>
           <div class="chips" id="occChips"></div>
         </section>
 
         <section class="step">
-          <h3>3. Names</h3>
+          <h3 data-i18n="create.step3"></h3>
           <div class="row">
-            <label class="field"><span>To</span><input type="text" name="to" id="to" maxlength="60" placeholder="Mom, Linh, The team…" required></label>
-            <label class="field"><span>From</span><input type="text" name="from" id="from" maxlength="60" placeholder="Your name"></label>
+            <label class="field"><span data-i18n="create.to"></span><input type="text" name="to" id="to" maxlength="60" data-i18n-placeholder="create.toPlaceholder" required></label>
+            <label class="field"><span data-i18n="create.from"></span><input type="text" name="from" id="from" maxlength="60" data-i18n-placeholder="create.fromPlaceholder"></label>
           </div>
         </section>
 
         <section class="step">
-          <h3>4. Your message <small>(optional if you add a photo or voice)</small></h3>
-          <textarea name="message" id="message" maxlength="2000" placeholder="Write something from the heart…"></textarea>
+          <h3><span data-i18n="create.step4"></span> <small data-i18n="create.step4Hint"></small></h3>
+          <textarea name="message" id="message" maxlength="2000" data-i18n-placeholder="create.messagePlaceholder"></textarea>
           <div class="muted"><span id="count">0</span>/2000</div>
         </section>
 
         <section class="step">
-          <h3>5. Photo or video <small>(optional, up to 50 MB)</small></h3>
-          <div class="drop" id="drop" tabindex="0" role="button" aria-label="Choose a photo or video">
-            <div id="dropInner">📷 Tap to choose, or drag a photo/video here</div>
+          <h3><span data-i18n="create.step5"></span> <small data-i18n="create.step5Hint"></small></h3>
+          <div class="drop" id="drop" tabindex="0" role="button" data-i18n-aria="create.dropLabel">
+            <div id="dropInner"></div>
           </div>
           <input type="file" id="mediaInput" accept="image/jpeg,image/png,image/gif,image/webp,video/mp4,video/webm,video/quicktime" hidden>
-          <button type="button" class="small-btn" id="removeMedia" hidden>Remove</button>
+          <button type="button" class="small-btn" id="removeMedia" data-i18n="create.remove" hidden></button>
         </section>
 
         <section class="step">
-          <h3>6. Your voice <small>(optional)</small></h3>
+          <h3><span data-i18n="create.step6"></span> <small data-i18n="create.optional"></small></h3>
           <div class="recorder">
-            <button type="button" class="rec-btn" id="recBtn" aria-label="Start recording">🎙️</button>
-            <div id="recStatus" class="muted">Tap to record a voice message (up to 3 minutes)</div>
+            <button type="button" class="rec-btn" id="recBtn">🎙️</button>
+            <div id="recStatus" class="muted"></div>
             <audio id="recPlayback" controls hidden></audio>
           </div>
           <div style="margin-top:8px">
-            <button type="button" class="small-btn" id="removeVoice" hidden>Delete recording</button>
-            <span class="muted" id="uploadVoiceWrap"> · or <label class="small-btn" style="cursor:pointer">upload an audio file<input type="file" id="voiceFile" accept="audio/*" hidden></label></span>
+            <button type="button" class="small-btn" id="removeVoice" data-i18n="create.deleteRec" hidden></button>
+            <span class="muted"> <span data-i18n="create.or"></span> <label class="small-btn" style="cursor:pointer"><span data-i18n="create.uploadAudio"></span><input type="file" id="voiceFile" accept="audio/*" hidden></label></span>
           </div>
         </section>
 
         <label class="toggle">
           <input type="checkbox" id="isPublic">
-          <span>Also show it on the public <b>Love wall</b><br><span class="muted">Otherwise only people with the link can see it.</span></span>
+          <span><b data-i18n="create.publicTitle"></b><br><span class="muted" data-i18n="create.publicHint"></span></span>
         </label>
 
-        <button class="btn btn-block" id="submit" type="submit">Create my card 💌</button>
+        <button class="btn btn-block" id="submit" type="submit" data-i18n="create.submit"></button>
         <div class="error" id="error" role="alert"></div>
 
         <div class="share" id="share" hidden>
-          <b>Your card is ready! 🎉</b>
-          <div class="muted">Send this link to them:</div>
+          <b data-i18n="create.ready"></b>
+          <div class="muted" data-i18n="create.sendLink"></div>
           <div class="linkbox">
             <input type="text" id="shareUrl" readonly>
-            <button type="button" class="btn" id="copyBtn">Copy</button>
+            <button type="button" class="btn" id="copyBtn" data-i18n="create.copy"></button>
           </div>
           <div class="actions" style="justify-content:flex-start">
-            <a class="btn ghost" id="openCard" target="_blank">Open card</a>
-            <button type="button" class="btn ghost" id="nativeShare" hidden>Share…</button>
-            <button type="button" class="btn ghost" id="another">Make another</button>
+            <a class="btn ghost" id="openCard" target="_blank" data-i18n="create.openCard"></a>
+            <button type="button" class="btn ghost" id="nativeShare" data-i18n="create.share" hidden></button>
+            <button type="button" class="btn ghost" id="another" data-i18n="create.another"></button>
           </div>
         </div>
       </form>
 
       <aside>
         <div class="preview-sticky">
-          <div class="muted" style="margin-bottom:8px">Live preview</div>
+          <div class="muted" style="margin-bottom:8px" data-i18n="create.preview"></div>
           <div id="preview"></div>
         </div>
       </aside>
     </div>
   </main>
 
+  <script src="/i18n.js"></script>
   <script src="/themes.js"></script>
   <script src="/create.js"></script>
 </body>

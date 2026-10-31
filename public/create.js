@@ -1,12 +1,17 @@
 const $ = id => document.getElementById(id);
-const state = { relationship: 'love', occasion: 'love', media: null, mediaUrl: null, voice: null, voiceUrl: null };
+const t = (k, v) => i18n.t(k, v);
+const state = { relationship: 'love', occasion: 'love', media: null, mediaUrl: null, voice: null, voiceUrl: null, error: '' };
 const MAX_REC_MS = 3 * 60 * 1000;
 
+i18n.apply();
+
 // ---- Chips ----
-function chips(container, items, key) {
-  container.innerHTML = items.map(i =>
-    `<button type="button" class="chip" data-id="${i.id}" aria-pressed="${i.id === state[key]}">${i.emoji} ${i.label}</button>`
-  ).join('');
+function chips(container, items, key, label) {
+  const draw = () => {
+    container.innerHTML = items.map(i =>
+      `<button type="button" class="chip" data-id="${i.id}" aria-pressed="${i.id === state[key]}">${i.emoji} ${HF.esc(label(i.id))}</button>`
+    ).join('');
+  };
   container.addEventListener('click', e => {
     const btn = e.target.closest('.chip');
     if (!btn) return;
@@ -14,18 +19,21 @@ function chips(container, items, key) {
     container.querySelectorAll('.chip').forEach(c => c.setAttribute('aria-pressed', c === btn));
     render();
   });
+  draw();
+  i18n.onChange(draw);
 }
-chips($('relChips'), HF.relationships, 'relationship');
-chips($('occChips'), HF.occasions, 'occasion');
+chips($('relChips'), HF.relationships, 'relationship', id => HF.relLabel(id));
+chips($('occChips'), HF.occasions, 'occasion', id => HF.occLabel(id));
 
 // ---- Live preview ----
 function render() {
   const occ = HF.occasion(state.occasion);
   HF.applyTheme(document.documentElement, occ);
   $('preview').innerHTML = HF.renderCard({
+    lang: i18n.lang,
     to: $('to').value.trim(),
     from: $('from').value.trim(),
-    message: $('message').value.trim() || (state.media || state.voice ? '' : 'Your message will appear here…'),
+    message: $('message').value.trim() || (state.media || state.voice ? '' : t('create.previewMessage')),
     occasion: state.occasion,
     relationship: state.relationship,
     media: state.media ? { url: state.mediaUrl, kind: state.media.type.startsWith('video') ? 'video' : 'image' } : null,
@@ -36,21 +44,25 @@ function render() {
 ['to', 'from', 'message'].forEach(id => $(id).addEventListener('input', render));
 
 // ---- Media ----
+function drawDrop() {
+  const file = state.media;
+  $('dropInner').innerHTML = !file ? HF.esc(t('create.drop'))
+    : file.type.startsWith('video')
+      ? `<video src="${state.mediaUrl}" muted playsinline></video>${HF.esc(file.name)}`
+      : `<img src="${state.mediaUrl}" alt="">${HF.esc(file.name)}`;
+}
 function setMedia(file) {
   if (state.mediaUrl) URL.revokeObjectURL(state.mediaUrl);
   state.media = file;
   state.mediaUrl = file ? URL.createObjectURL(file) : null;
-  $('dropInner').innerHTML = !file ? '📷 Tap to choose, or drag a photo/video here'
-    : file.type.startsWith('video')
-      ? `<video src="${state.mediaUrl}" muted playsinline></video>${HF.esc(file.name)}`
-      : `<img src="${state.mediaUrl}" alt="">${HF.esc(file.name)}`;
+  drawDrop();
   $('removeMedia').hidden = !file;
   render();
 }
 function pickMedia(file) {
   if (!file) return;
-  if (!/^(image|video)\//.test(file.type)) return showError('Please choose a photo or video.');
-  if (file.size > 50 * 1024 * 1024) return showError('That file is over 50 MB.');
+  if (!/^(image|video)\//.test(file.type)) return showError('err.notMedia');
+  if (file.size > 50 * 1024 * 1024) return showError('err.tooBig');
   showError('');
   setMedia(file);
 }
@@ -66,6 +78,19 @@ $('removeMedia').addEventListener('click', () => { $('mediaInput').value = ''; s
 // ---- Voice recording ----
 let recorder = null, chunks = [], recTimer = null, recStart = 0;
 
+function isRecording() { return recorder && recorder.state === 'recording'; }
+
+function drawRecStatus() {
+  const recording = isRecording();
+  $('recBtn').setAttribute('aria-label', t(recording ? 'create.recStop' : 'create.recStart'));
+  if (recording) {
+    const s = Math.floor((Date.now() - recStart) / 1000);
+    $('recStatus').textContent = t('create.recRunning', { time: `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}` });
+  } else {
+    $('recStatus').textContent = t(state.voice ? 'create.recDone' : 'create.recIdle');
+  }
+}
+
 function setVoice(blob) {
   if (state.voiceUrl) URL.revokeObjectURL(state.voiceUrl);
   state.voice = blob;
@@ -73,7 +98,7 @@ function setVoice(blob) {
   $('recPlayback').hidden = !blob;
   if (blob) $('recPlayback').src = state.voiceUrl;
   $('removeVoice').hidden = !blob;
-  $('recStatus').textContent = blob ? 'Recorded! Listen back below, or record again.' : 'Tap to record a voice message (up to 3 minutes)';
+  drawRecStatus();
   render();
 }
 
@@ -83,9 +108,7 @@ function pickMime() {
 }
 
 async function startRecording() {
-  if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
-    return showError('Recording is not supported in this browser. You can upload an audio file instead.');
-  }
+  if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) return showError('err.noRecorder');
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     const mimeType = pickMime();
@@ -97,47 +120,48 @@ async function startRecording() {
       clearInterval(recTimer);
       $('recBtn').classList.remove('recording');
       $('recBtn').textContent = '🎙️';
-      $('recBtn').setAttribute('aria-label', 'Start recording');
       setVoice(new Blob(chunks, { type: (recorder.mimeType || 'audio/webm').split(';')[0] }));
     };
     recorder.start();
     recStart = Date.now();
     $('recBtn').classList.add('recording');
     $('recBtn').textContent = '⏹';
-    $('recBtn').setAttribute('aria-label', 'Stop recording');
     showError('');
+    drawRecStatus();
     recTimer = setInterval(() => {
-      const ms = Date.now() - recStart;
-      const s = Math.floor(ms / 1000);
-      $('recStatus').textContent = `Recording… ${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}  (tap to stop)`;
-      if (ms >= MAX_REC_MS) recorder.stop();
+      drawRecStatus();
+      if (Date.now() - recStart >= MAX_REC_MS) recorder.stop();
     }, 250);
   } catch {
-    showError('Microphone access was blocked. Allow it in your browser settings, or upload an audio file.');
+    showError('err.micBlocked');
   }
 }
 $('recBtn').addEventListener('click', () => {
-  if (recorder && recorder.state === 'recording') recorder.stop();
+  if (isRecording()) recorder.stop();
   else startRecording();
 });
 $('removeVoice').addEventListener('click', () => { $('voiceFile').value = ''; setVoice(null); });
 $('voiceFile').addEventListener('change', e => {
   const f = e.target.files[0];
   if (!f) return;
-  if (f.size > 50 * 1024 * 1024) return showError('That audio file is over 50 MB.');
+  if (f.size > 50 * 1024 * 1024) return showError('err.audioTooBig');
   setVoice(f);
 });
 
 // ---- Submit ----
-function showError(msg) { $('error').textContent = msg; }
+// Errors are stored as keys so they re-translate when the language changes
+function showError(key) {
+  state.error = key;
+  $('error').textContent = key ? t(key) : '';
+}
 
 $('form').addEventListener('submit', async e => {
   e.preventDefault();
   const to = $('to').value.trim();
   const message = $('message').value.trim();
-  if (!to) { showError('Please tell us who this is for.'); $('to').focus(); return; }
-  if (!message && !state.media && !state.voice) return showError('Add a message, a photo/video, or a voice note.');
-  if (recorder && recorder.state === 'recording') return showError('Stop the recording first.');
+  if (!to) { showError('err.noRecipient'); $('to').focus(); return; }
+  if (!message && !state.media && !state.voice) return showError('err.empty');
+  if (isRecording()) return showError('err.stopFirst');
 
   const fd = new FormData();
   fd.append('to', to);
@@ -145,6 +169,7 @@ $('form').addEventListener('submit', async e => {
   fd.append('message', message);
   fd.append('relationship', state.relationship);
   fd.append('occasion', state.occasion);
+  fd.append('lang', i18n.lang);
   fd.append('isPublic', $('isPublic').checked);
   if (state.media) fd.append('media', state.media);
   if (state.voice) {
@@ -153,12 +178,12 @@ $('form').addEventListener('submit', async e => {
   }
 
   $('submit').disabled = true;
-  $('submit').textContent = 'Creating…';
+  $('submit').textContent = t('create.submitting');
   showError('');
   try {
     const res = await fetch('/api/cards', { method: 'POST', body: fd });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Something went wrong');
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.code ? 'err.' + data.code : 'err.generic');
     const url = location.origin + data.url;
     try { localStorage.setItem('hf-edit-' + data.id, data.editToken); } catch {}
     $('shareUrl').value = url;
@@ -169,21 +194,34 @@ $('form').addEventListener('submit', async e => {
     $('share').scrollIntoView({ behavior: 'smooth', block: 'center' });
     HF.burst(document.body, HF.occasion(state.occasion).particles);
   } catch (err) {
-    showError(err.message);
+    showError(err.message.startsWith('err.') ? err.message : 'err.generic');
   } finally {
     $('submit').disabled = false;
-    $('submit').textContent = 'Create my card 💌';
+    $('submit').textContent = t('create.submit');
   }
 });
 
 $('copyBtn').addEventListener('click', async () => {
   try { await navigator.clipboard.writeText($('shareUrl').value); } catch { $('shareUrl').select(); document.execCommand('copy'); }
-  $('copyBtn').textContent = 'Copied!';
-  setTimeout(() => ($('copyBtn').textContent = 'Copy'), 1500);
+  $('copyBtn').textContent = t('create.copied');
+  setTimeout(() => ($('copyBtn').textContent = t('create.copy')), 1500);
 });
 $('nativeShare').addEventListener('click', () => {
-  navigator.share({ title: 'A card for you 💌', text: `${$('from').value.trim() || 'Someone'} made you a card`, url: $('shareUrl').value }).catch(() => {});
+  navigator.share({
+    title: t('create.shareTitle'),
+    text: t('create.shareText', { from: $('from').value.trim() || t('create.someone') }),
+    url: $('shareUrl').value,
+  }).catch(() => {});
 });
 $('another').addEventListener('click', () => location.reload());
 
+i18n.onChange(() => {
+  drawDrop();
+  drawRecStatus();
+  showError(state.error);
+  render();
+});
+
+drawDrop();
+drawRecStatus();
 render();

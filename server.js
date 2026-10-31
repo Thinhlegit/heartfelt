@@ -28,6 +28,7 @@ function saveCards() {
 
 // ---- Allowed choices ----
 const RELATIONSHIPS = ['love', 'family', 'parents', 'friend', 'coworker', 'teacher', 'other'];
+const LANGS = ['en', 'vi'];
 const OCCASIONS = [
   'love', 'birthday', 'anniversary', 'congrats', 'thankyou',
   'celebration', 'getwell', 'justbecause',
@@ -56,7 +57,7 @@ const upload = multer({
     const ok = file.fieldname === 'media' ? MEDIA_TYPES.test(file.mimetype)
       : file.fieldname === 'voice' ? VOICE_TYPES.test(file.mimetype)
       : false;
-    cb(ok ? null : new Error(`Unsupported file type: ${file.mimetype}`), ok);
+    cb(ok ? null : Object.assign(new Error(`Unsupported file type: ${file.mimetype}`), { code: 'fileType' }), ok);
   },
 });
 
@@ -86,6 +87,7 @@ app.post('/api/cards', upload.fields([{ name: 'media', maxCount: 1 }, { name: 'v
     relationship: RELATIONSHIPS.includes(b.relationship) ? b.relationship : 'other',
     occasion: OCCASIONS.includes(b.occasion) ? b.occasion : 'justbecause',
     message: clean(b.message, 2000),
+    lang: LANGS.includes(b.lang) ? b.lang : 'en',
     isPublic: b.isPublic === 'true' || b.isPublic === 'on',
     media: null,
     voice: null,
@@ -95,7 +97,7 @@ app.post('/api/cards', upload.fields([{ name: 'media', maxCount: 1 }, { name: 'v
 
   if (!card.to) {
     removeUploads();
-    return res.status(400).json({ error: 'Please tell us who this is for.' });
+    return res.status(400).json({ code: 'noRecipient', error: 'Please tell us who this is for.' });
   }
 
   const media = req.files?.media?.[0];
@@ -105,7 +107,7 @@ app.post('/api/cards', upload.fields([{ name: 'media', maxCount: 1 }, { name: 'v
 
   if (!card.message && !card.media && !card.voice) {
     removeUploads();
-    return res.status(400).json({ error: 'Add a message, a photo/video, or a voice note.' });
+    return res.status(400).json({ code: 'empty', error: 'Add a message, a photo/video, or a voice note.' });
   }
 
   cards[card.id] = card;
@@ -152,8 +154,9 @@ app.get('/wall', (req, res) => res.sendFile(path.join(__dirname, 'public', 'wall
 
 app.use((err, req, res, next) => {
   Object.values(req.files || {}).flat().forEach(f => fs.unlink(f.path, () => {}));
-  const msg = err.code === 'LIMIT_FILE_SIZE' ? 'File is too large (max 50 MB).' : err.message;
-  res.status(400).json({ error: msg });
+  const code = err.code === 'LIMIT_FILE_SIZE' ? 'tooBig' : err.code === 'fileType' ? 'fileType' : 'generic';
+  const msg = code === 'tooBig' ? 'File is too large (max 50 MB).' : err.message;
+  res.status(400).json({ code, error: msg });
 });
 
 app.listen(PORT, () => console.log(`Heartfelt running at http://localhost:${PORT}`));

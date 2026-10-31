@@ -3,81 +3,111 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>A card for you 💌</title>
+  <title data-i18n-title="card.pageTitle">A card for you 💌</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,600;0,700;1,500&family=Nunito:wght@400;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,600;0,700;1,500&family=Nunito:wght@400;700;800&display=swap&subset=vietnamese" rel="stylesheet">
   <link rel="stylesheet" href="/style.css">
 </head>
 <body>
   <nav class="nav">
     <a class="brand" href="/">💌 Heartfelt</a>
-    <a class="link" href="/">Make your own →</a>
+    <div class="nav-links">
+      <button type="button" class="lang-toggle"></button>
+      <a class="link" href="/" data-i18n="nav.makeOwn">Make your own →</a>
+    </div>
   </nav>
   <main class="card-page" id="root">
-    <div class="empty">Loading…</div>
+    <div class="empty" data-i18n="card.loading">Loading…</div>
   </main>
 
+  <script src="/i18n.js"></script>
   <script src="/themes.js"></script>
   <script>
+    i18n.apply();
+    const t = (k, v) => i18n.t(k, v);
+    const e = s => HF.esc(s);
     const root = document.getElementById('root');
     const id = location.pathname.split('/').pop();
+    let card = null, view = 'loading', shareCopied = false;
 
-    fetch('/api/cards/' + encodeURIComponent(id))
-      .then(r => r.ok ? r.json() : Promise.reject())
-      .then(showEnvelope)
-      .catch(() => {
-        root.innerHTML = `<div class="empty"><h2>Card not found 💔</h2><p>The link may be wrong or the card was deleted.</p><a class="btn" href="/">Make a card</a></div>`;
-      });
-
-    function showEnvelope(card) {
-      const occ = HF.occasion(card.occasion);
-      HF.applyTheme(document.documentElement, occ);
-      document.title = `${occ.title}, ${card.to}! ${occ.emoji}`;
-      root.innerHTML = `
-        <div class="envelope" id="env" role="button" tabindex="0" aria-label="Open your card">
-          <div>
-            <div class="seal">${occ.emoji}</div>
-            <h2 style="margin:0">${HF.esc(card.to)}, you have a card!</h2>
-            <p class="muted">${card.from ? 'From ' + HF.esc(card.from) + ' · ' : ''}Tap to open</p>
-          </div>
-        </div>`;
-      const env = document.getElementById('env');
-      const open = () => showCard(card, occ);
-      env.addEventListener('click', open);
-      env.addEventListener('keydown', e => (e.key === 'Enter' || e.key === ' ') && open());
+    // The card itself stays in the sender's language; buttons and hints follow the viewer's
+    function draw() {
+      if (view === 'missing') {
+        root.innerHTML = `<div class="empty"><h2>${e(t('card.notFound'))}</h2><p>${e(t('card.notFoundBody'))}</p><a class="btn" href="/">${e(t('card.makeCard'))}</a></div>`;
+      } else if (view === 'envelope') {
+        const occ = HF.occasion(card.occasion);
+        const cardT = (k, v) => i18n.t(k, v, card.lang);
+        document.title = `${HF.occTitle(occ.id, card.lang)}, ${card.to}! ${occ.emoji}`;
+        root.innerHTML = `
+          <div class="envelope" id="env" role="button" tabindex="0" aria-label="${e(t('card.openLabel'))}">
+            <div>
+              <div class="seal">${occ.emoji}</div>
+              <h2 style="margin:0" lang="${e(card.lang || 'en')}">${e(cardT('card.youHaveCard', { to: card.to }))}</h2>
+              <p class="muted">${card.from ? e(t('card.fromLine', { from: card.from })) : ''}${e(t('card.tapToOpen'))}</p>
+            </div>
+          </div>`;
+        const env = document.getElementById('env');
+        env.addEventListener('click', openCard);
+        env.addEventListener('keydown', ev => (ev.key === 'Enter' || ev.key === ' ') && openCard());
+      } else if (view === 'open') {
+        drawActions();
+      }
     }
 
-    function showCard(card, occ) {
-      const token = (() => { try { return localStorage.getItem('hf-edit-' + card.id); } catch { return null; } })();
-      root.innerHTML = `
-        <div class="reveal">${HF.renderCard(card)}</div>
-        <div class="actions">
-          <button class="btn heart-btn" id="heart">❤️ Send love <span id="hc">${card.hearts || 0}</span></button>
-          <button class="btn ghost" id="share">Share</button>
-          <a class="btn ghost" href="/">Make one back</a>
-          ${token ? '<button class="btn ghost" id="del">Delete card</button>' : ''}
-        </div>`;
-      HF.burst(document.body, occ.particles, 30);
-      const v = root.querySelector('.media video');
-      if (v) v.play().catch(() => {});
+    function editToken() {
+      try { return localStorage.getItem('hf-edit-' + card.id); } catch { return null; }
+    }
+
+    function drawActions() {
+      const token = editToken();
+      document.getElementById('actions').innerHTML = `
+        <button class="btn heart-btn" id="heart">${e(t('card.sendLove'))} <span id="hc">${card.hearts || 0}</span></button>
+        <button class="btn ghost" id="share">${e(t(shareCopied ? 'card.linkCopied' : 'card.share'))}</button>
+        <a class="btn ghost" href="/">${e(t('card.makeBack'))}</a>
+        ${token ? `<button class="btn ghost" id="del">${e(t('card.delete'))}</button>` : ''}`;
 
       document.getElementById('heart').addEventListener('click', async () => {
         HF.burst(document.body, ['❤️'], 8);
         const r = await fetch(`/api/cards/${card.id}/heart`, { method: 'POST' });
-        if (r.ok) document.getElementById('hc').textContent = (await r.json()).hearts;
+        if (r.ok) {
+          card.hearts = (await r.json()).hearts;
+          document.getElementById('hc').textContent = card.hearts;
+        }
       });
       document.getElementById('share').addEventListener('click', async () => {
         if (navigator.share) return navigator.share({ title: document.title, url: location.href }).catch(() => {});
         await navigator.clipboard.writeText(location.href);
-        document.getElementById('share').textContent = 'Link copied!';
+        shareCopied = true;
+        document.getElementById('share').textContent = t('card.linkCopied');
       });
       const del = document.getElementById('del');
       if (del) del.addEventListener('click', async () => {
-        if (!confirm('Delete this card for everyone? This cannot be undone.')) return;
+        if (!confirm(t('card.confirmDelete'))) return;
         const r = await fetch('/api/cards/' + card.id, { method: 'DELETE', headers: { 'x-edit-token': token } });
         if (r.ok) { try { localStorage.removeItem('hf-edit-' + card.id); } catch {} location.href = '/'; }
       });
     }
+
+    function openCard() {
+      view = 'open';
+      root.innerHTML = `<div class="reveal">${HF.renderCard(card)}</div><div class="actions" id="actions"></div>`;
+      drawActions();
+      HF.burst(document.body, HF.occasion(card.occasion).particles, 30);
+      const v = root.querySelector('.media video');
+      if (v) v.play().catch(() => {});
+    }
+
+    i18n.onChange(draw);
+
+    fetch('/api/cards/' + encodeURIComponent(id))
+      .then(r => r.ok ? r.json() : Promise.reject())
+      .then(c => {
+        card = c;
+        HF.applyTheme(document.documentElement, HF.occasion(card.occasion));
+        view = 'envelope';
+        draw();
+      })
+      .catch(() => { view = 'missing'; draw(); });
   </script>
 </body>
 </html>
