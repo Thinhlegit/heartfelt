@@ -1,5 +1,7 @@
 # Heartfelt
 
+**English** · [Tiếng Việt](README.vi.md)
+
 Write someone a card — for a partner, parent, friend or co-worker — and send it as a link. They open a sealed envelope and find your message, photo or video, voice note and signature inside.
 
 English and Vietnamese.
