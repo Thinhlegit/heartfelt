@@ -224,7 +224,7 @@ textarea { min-height: 120px; resize: vertical; }
 .design-tile {
   display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 10px 6px; min-width: 0;
   border: 1.5px solid var(--line); background: transparent; color: var(--text); border-radius: 14px;
-  font: inherit; font-size: .9rem; cursor: pointer; transition: all .15s;
+  font: inherit; font-size: .9rem; cursor: pointer; transition: border-color .15s, box-shadow .15s;
 }
 .design-tile:hover { border-color: var(--a); }
 .design-tile[aria-pressed="true"] { border-color: var(--a); box-shadow: 0 0 0 2px var(--a); font-weight: 800; }
