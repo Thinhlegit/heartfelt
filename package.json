@@ -1,6 +1,6 @@
 {
   "name": "heartfelt",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Send love, congrats and celebration cards with photo, video, text or voice",
   "main": "server.js",
   "scripts": {
