@@ -19,7 +19,8 @@ window.HF = {
     { id: 'classic' }, { id: 'polaroid' }, { id: 'elegant' },
     { id: 'confetti' }, { id: 'minimal' }, { id: 'postcard' },
   ],
-  effects: [{ id: 'confetti' }, { id: 'fireworks' }, { id: 'none' }],
+  effects: [{ id: 'confetti' }, { id: 'fireworks' }, { id: 'fold3d' }, { id: 'none' }],
+  characters: [{ id: 'none' }, { id: 'bear' }, { id: 'cat' }, { id: 'bunny' }, { id: 'chick' }],
   design(id) { return this.designs.find(d => d.id === id) || this.designs[0]; },
   occasion(id) { return this.occasions.find(o => o.id === id) || this.occasions[7]; },
   relationship(id) { return this.relationships.find(r => r.id === id) || this.relationships[6]; },
@@ -130,12 +131,119 @@ window.HF = {
     })();
   },
 
-  // The opening effect a sender picked for their card
-  playEffect(effect, occ) {
+  // The opening effect a sender picked for their card.
+  // fold3d needs the element holding the card (target) and the card data for its cover.
+  playEffect(effect, occ, target, card) {
     if (effect === 'none') return;
     if (effect === 'fireworks') return this.fireworks([occ.a, occ.b, '#f3d36b', '#ffffff']);
+    if (effect === 'fold3d' && target && card) {
+      if (this.fold3d(target, card)) setTimeout(() => this.confetti([occ.a, occ.b, '#ffffff'], 36), 1300);
+      return;
+    }
     this.confetti([occ.a, occ.b, '#ffffff', '#f3d36b']);
   },
+
+  // 3D card: a front cover hinged on the left swings open to reveal the card inside.
+  // Returns false when skipped (reduced motion or nothing to open).
+  fold3d(host, c) {
+    const card = host.querySelector('.greeting');
+    host.querySelectorAll('.fold-cover').forEach(el => el.remove());
+    if (!card || matchMedia('(prefers-reduced-motion: reduce)').matches) return false;
+    const lang = c.lang || 'en';
+    const occ = this.occasion(c.occasion);
+    const art = this.buddy(c.character) || `<span class="cover-emoji">${occ.emoji}</span>`;
+    const cover = document.createElement('div');
+    cover.className = 'fold-cover';
+    cover.setAttribute('aria-hidden', 'true');
+    cover.innerHTML = `
+      <div class="face front">
+        <div class="cover-art">${art}</div>
+        <div class="cover-title">${this.esc(this.occTitle(occ.id, lang))}</div>
+        <div class="cover-to">${this.esc(i18n.t('card.to', { to: c.to || i18n.t('card.someoneSpecial', null, lang) }, lang))}</div>
+      </div>
+      <div class="face back"></div>`;
+    this.applyTheme(cover, occ);
+    host.classList.add('fold3d');
+    host.prepend(cover);
+    cover.addEventListener('animationend', e => {
+      if (e.target !== cover) return;
+      cover.remove();
+      host.classList.remove('fold3d');
+    });
+    return true;
+  },
+
+  // Gentle 3D tilt that follows the pointer (mouse/trackpad only)
+  tilt(stage) {
+    if (!matchMedia('(hover: hover) and (pointer: fine)').matches || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    stage.classList.add('tilt');
+    stage.addEventListener('pointermove', e => {
+      const card = stage.querySelector('.greeting');
+      if (!card) return;
+      const r = card.getBoundingClientRect();
+      const x = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width));
+      const y = Math.min(1, Math.max(0, (e.clientY - r.top) / r.height));
+      card.style.setProperty('--ry', `${(x - 0.5) * 10}deg`);
+      card.style.setProperty('--rx', `${(0.5 - y) * 8}deg`);
+      card.style.setProperty('--gx', `${x * 100}%`);
+      card.style.setProperty('--gy', `${y * 100}%`);
+    });
+    stage.addEventListener('pointerleave', () => {
+      const card = stage.querySelector('.greeting');
+      if (card) ['--rx', '--ry'].forEach(p => card.style.setProperty(p, '0deg'));
+    });
+  },
+
+  // Little hand-drawn friends. Plain SVG attributes only (the CSP blocks inline styles);
+  // .accent takes the occasion colour, .wave and .eyes are animated in CSS.
+  buddy(id) {
+    const art = this.buddyArt[id];
+    return art ? `<div class="buddy buddy-${id}" aria-hidden="true"><svg viewBox="0 0 100 100">${art}</svg></div>` : '';
+  },
+  buddyArt: (() => {
+    const S = 'stroke="#3a2f25" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"';
+    const heart = (x, y) => `<path class="accent" d="M${x} ${y}c-2-4-8-3-8 2 0 4 8 9 8 9s8-5 8-9c0-5-6-6-8-2z" ${S}/>`;
+    const shadow = '<ellipse cx="50" cy="96" rx="22" ry="3" fill="#000" fill-opacity=".1"/>';
+    const body = fill => `<path d="M32 93c-2-14 4-27 18-27s20 13 18 27z" fill="${fill}" ${S}/>`;
+    const arm = `<path d="M34 77c-5 3-6 9-3 12" fill="none" ${S}/>`;
+    const wave = `<g class="wave"><path d="M66 77c6-3 10-9 12-16" fill="none" ${S}/>${heart(80, 50)}</g>`;
+    const cheeks = (y, o = '.5') => `<circle cx="35" cy="${y}" r="3.2" fill="#e8846b" fill-opacity="${o}"/><circle cx="65" cy="${y}" r="3.2" fill="#e8846b" fill-opacity="${o}"/>`;
+    const eyes = (y, ry = 2.4) => `<g class="eyes"><ellipse cx="41" cy="${y}" rx="2.4" ry="${ry}" fill="#3a2f25"/><ellipse cx="59" cy="${y}" rx="2.4" ry="${ry}" fill="#3a2f25"/></g>`;
+    return {
+      bear: shadow + body('#c38d63') + '<ellipse cx="50" cy="84" rx="9" ry="8" fill="#ecc9a3"/>' + arm +
+        `<circle cx="32" cy="24" r="8" fill="#c38d63" ${S}/><circle cx="68" cy="24" r="8" fill="#c38d63" ${S}/>` +
+        '<circle cx="32" cy="24" r="3.5" fill="#ecc9a3"/><circle cx="68" cy="24" r="3.5" fill="#ecc9a3"/>' +
+        `<circle cx="50" cy="42" r="22" fill="#c38d63" ${S}/><ellipse cx="50" cy="50" rx="10" ry="7.5" fill="#ecc9a3" ${S}/>` +
+        `<ellipse cx="50" cy="46.5" rx="3.2" ry="2.3" fill="#3a2f25"/><path d="M50 49v3m-4 1c2 2 6 2 8 0" fill="none" ${S}/>` +
+        eyes(39) + cheeks(47) + wave,
+      cat: shadow +
+        '<path d="M66 91c12 0 16-10 10-19" fill="none" stroke="#3a2f25" stroke-width="7.4" stroke-linecap="round"/>' +
+        '<path d="M66 91c12 0 16-10 10-19" fill="none" stroke="#e9a35b" stroke-width="4.4" stroke-linecap="round"/>' +
+        body('#e9a35b') + '<ellipse cx="50" cy="84" rx="9" ry="8" fill="#fbe3c4"/>' + arm +
+        `<path d="M29 33l2-19 15 9z" fill="#e9a35b" ${S}/><path d="M71 33l-2-19-15 9z" fill="#e9a35b" ${S}/>` +
+        '<path d="M33 28l1-8 6 4z" fill="#f4b6a6"/><path d="M67 28l-1-8-6 4z" fill="#f4b6a6"/>' +
+        `<ellipse cx="50" cy="43" rx="23" ry="20" fill="#e9a35b" ${S}/>` +
+        '<path d="M50 24v6M44 25l1 5M56 25l-1 5" fill="none" stroke="#b86f2c" stroke-width="2.2" stroke-linecap="round"/>' +
+        eyes(42, 3.2) + `<path d="M47.5 47h5l-2.5 3z" fill="#e8846b" stroke="#3a2f25" stroke-width="1.6" stroke-linejoin="round"/>` +
+        `<path d="M50 50c-1 2.5-4 2.5-5 1M50 50c1 2.5 4 2.5 5 1" fill="none" ${S}/>` +
+        '<path d="M30 47l-9-2M30 51l-9 1M70 47l9-2M70 51l9 1" fill="none" stroke="#3a2f25" stroke-width="1.6" stroke-linecap="round"/>' +
+        cheeks(49, '.35') + wave,
+      bunny: shadow + body('#f7f1ea') + '<ellipse cx="50" cy="84" rx="9" ry="8" fill="#ffffff"/>' + arm +
+        `<path d="M39 28c-6-14-5-25 1-25s9 11 5 25" fill="#f7f1ea" ${S}/><path d="M61 28c6-14 5-25-1-25s-9 11-5 25" fill="#f7f1ea" ${S}/>` +
+        '<path d="M41 23c-3-9-2-15 0-15s3 6 2 15" fill="#f4b6a6"/><path d="M59 23c3-9 2-15 0-15s-3 6-2 15" fill="#f4b6a6"/>' +
+        `<circle cx="50" cy="45" r="21" fill="#f7f1ea" ${S}/>` +
+        eyes(43) + '<ellipse cx="50" cy="49.5" rx="2.6" ry="2" fill="#e8846b"/>' +
+        `<path d="M50 51.5v2m-3.5 1c1.5 1.5 5.5 1.5 7 0" fill="none" ${S}/>` + cheeks(50, '.6') + wave,
+      chick: shadow +
+        '<path d="M42 91v5m-3 0h6M58 91v5m-3 0h6" fill="none" stroke="#ef8a3c" stroke-width="2.4" stroke-linecap="round"/>' +
+        `<path d="M50 22c18 0 28 16 28 36s-10 34-28 34-28-14-28-34 10-36 28-36z" fill="#f6cf4e" ${S}/>` +
+        `<path d="M48 22c-2-6 1-10 4-11M51 22c1-5 5-7 8-6" fill="none" ${S}/>` +
+        `<path d="M25 62c-6 4-6 12-1 15 4-3 5-10 1-15z" fill="#efbd2f" ${S}/>` +
+        eyes(45) + `<path d="M46 52l4 5 4-5z" fill="#ef8a3c" stroke="#3a2f25" stroke-width="1.8" stroke-linejoin="round"/>` +
+        cheeks(54, '.45') +
+        `<g class="wave"><path d="M75 63c8-2 11-8 11-14" fill="none" ${S}/>${heart(86, 38)}</g>`,
+    };
+  })(),
 
   // Card markup used by the live preview, the card page and the wall.
   // The card's own text uses the language it was written in (c.lang).
@@ -150,6 +258,11 @@ window.HF = {
     const voice = !c.voice ? '' : compact
       ? `<div class="badges">${this.icon('mic')}<span>${e(t('card.voiceBadge'))}</span></div>`
       : `<div class="voice"><div class="label">${this.icon('mic')}${e(t('card.voiceFrom', { from: c.from || t('card.me') }))}</div><audio src="${e(c.voice.url)}" controls></audio></div>`;
+    const sign = c.signature
+      ? `<div class="from signed"><img src="${e(c.signature.url)}" alt="${e(t('card.signedBy', { from: c.from || t('card.me') }))}"></div>`
+      : c.from ? `<div class="from">${e(c.from)}</div>` : '';
+    const buddy = this.buddy(c.character);
+    const foot = buddy ? `<div class="foot">${buddy}${sign}</div>` : sign;
     return `
       <div class="greeting design-${this.design(c.design).id}" lang="${e(lang)}">
         <div class="top">
@@ -161,9 +274,7 @@ window.HF = {
           ${media}
           ${c.message ? `<div class="msg">${e(c.message)}</div>` : ''}
           ${voice}
-          ${c.signature
-            ? `<div class="from signed"><img src="${e(c.signature.url)}" alt="${e(t('card.signedBy', { from: c.from || t('card.me') }))}"></div>`
-            : c.from ? `<div class="from">${e(c.from)}</div>` : ''}
+          ${foot}
         </div>
       </div>`;
   },

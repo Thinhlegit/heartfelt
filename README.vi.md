@@ -10,7 +10,7 @@ Hỗ trợ tiếng Việt và tiếng Anh.
 
 - **Viết** lời nhắn, hoặc bắt đầu từ một câu gợi ý theo dịp
 - **Thêm** ảnh hoặc video, ghi âm ngay trên trình duyệt, và chữ ký vẽ tay
-- **Trang trí**: 8 dịp, 6 kiểu thiệp, và pháo giấy, pháo hoa hoặc không gì cả khi mở thiệp
+- **Trang trí**: 8 dịp, 6 kiểu thiệp, một người bạn nhỏ phong cách chibi (gấu, mèo, thỏ hoặc gà con), và pháo giấy, pháo hoa hoặc thiệp 3D mở ra
 - **Chia sẻ** bằng link riêng tư, hoặc ghim thêm lên **Bức tường yêu thương** công khai
 - **Nhận thiệp**: người nhận mở phong bì và có thể gửi lại trái tim
 

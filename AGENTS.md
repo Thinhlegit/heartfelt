@@ -4,7 +4,7 @@ Read this before changing anything. It tells you how the app is built, the rules
 
 ## 1. What this is
 
-A web app for making greeting cards (message, photo/video, voice note, hand-drawn signature) and sharing them by link. Recipients open an animated envelope. Optional public "Love wall" with reporting. UI in English and Vietnamese.
+A web app for making greeting cards (message, photo/video, voice note, hand-drawn signature, optional chibi character) and sharing them by link. Recipients open an animated envelope. Optional public "Love wall" with reporting. UI in English and Vietnamese.
 
 - **Stack:** Node.js 22, Express 4, multer (uploads), helmet (headers), express-rate-limit
 - **Frontend:** plain HTML/CSS/JS in `public/`. No framework, no bundler, no build step
@@ -44,7 +44,7 @@ Browser ──► Caddy (optional, HTTPS) ──► Express (server.js)
 | `public/index.html` + `create.js` | Create page: chips, design tiles, effects, starter lines, extras (media / voice with level meter / signature canvas), draft autosave, phone preview sheet, submit, done screen |
 | `public/card.html` + `card.js` | Recipient page: envelope, reveal, hearts, share, report, delete (if this browser made it) |
 | `public/wall.html` + `wall.js` | Love wall with occasion tabs |
-| `public/themes.js` | `window.HF`: occasions/designs/effects lists, `renderCard()` (shared by all pages), `icon()`, `confetti()`, `fireworks()`, `playEffect()`, `esc()` |
+| `public/themes.js` | `window.HF`: occasions/designs/effects/characters lists, `renderCard()` (shared by all pages), `icon()`, `confetti()`, `fireworks()`, `fold3d()` + `tilt()` (3D card), `buddy()` + `buddyArt` (character SVGs), `playEffect()`, `esc()` |
 | `public/i18n.js` | `window.I18N` strings (`en`, `vi`) + `window.i18n` (`t()`, `set()`, `onChange()`, `apply()` for `data-i18n*` attributes) |
 | `public/style.css` | Tokens, layout, card designs (`.greeting.design-<id>`), components, view transitions |
 | `setup.sh` | One-step setup (bash 3.2 compatible for macOS) |
@@ -56,7 +56,7 @@ Browser ──► Caddy (optional, HTTPS) ──► Express (server.js)
 {
   id, editToken,               // 12-char base64url id; 32-char secret token
   to, from, message, lang,     // lang: 'en' | 'vi' (card text renders in this language)
-  relationship, occasion, design, effect,   // whitelisted enums, see server.js "Allowed choices"
+  relationship, occasion, design, effect, character,   // whitelisted enums, see server.js "Allowed choices"
   isPublic,                    // shown on Love wall if true and reports < REPORT_HIDE_AT
   media: { url, kind: 'image'|'video' } | null,
   voice: { url } | null,
@@ -92,7 +92,7 @@ Errors are `{ code, error }`; the client translates `code` via `err.<code>` keys
 5. **Secrets stay server-side.** Any new private field must be stripped in `publicCard()`.
 6. **Every UI string exists in both `en` and `vi`.** Card content uses `card.lang`; buttons and hints use the viewer's language.
 7. **State-changing routes** go under `/api` (origin check + rate limit apply automatically) and need their own limiter if they're cheap to abuse.
-8. **Respect reduced motion** for any animation (`HF.confetti`/`fireworks` already return early).
+8. **Respect reduced motion** for any animation (`HF.confetti`/`fireworks`/`fold3d`/`tilt` already return early).
 9. **Container is read-only.** At runtime only `data/`, `uploads/` and a 16 MB `/tmp` are writable. Keep it that way.
 10. **No build step.** Don't introduce bundlers or frameworks without the owner's agreement.
 
@@ -100,7 +100,8 @@ Errors are `{ code, error }`; the client translates `code` via `err.<code>` keys
 
 - **New occasion:** add to `OCCASIONS` (server.js) and `HF.occasions` (themes.js, with colours `a`/`b` and a stamp emoji), then add `occ.<id>`, `title.<id>`, `sug.<id>.1`, `sug.<id>.2` in both languages.
 - **New card design:** `DESIGNS` (server.js), `HF.designs`, `design.<id>` strings, `.greeting.design-<id>` rules, a `.sw-<id>` swatch, and `.wall .greeting.design-<id>` tweaks. Check it in the preview, on the card page and on the wall.
-- **New opening effect:** `EFFECTS` (server.js), `HF.effects`, `effect.<id>` strings, a branch in `HF.playEffect()`.
+- **New opening effect:** `EFFECTS` (server.js), `HF.effects`, `effect.<id>` strings, a branch in `HF.playEffect()`. Effects that act on the card itself (like `fold3d`) receive the card's container and data; elsewhere (done screen) fall back to confetti.
+- **New character:** `CHARACTERS` (server.js), `HF.characters`, an SVG in `HF.buddyArt` (viewBox 0 0 100 100, presentation attributes only, heart with `class="accent"`, waving arm in `<g class="wave">` with the shoulder at its bottom-left, eyes in `<g class="eyes">`), and `character.<id>` strings in both languages.
 - **New language:** copy the `en` block in `i18n.js` to a new key, translate every string, and add the code to `LANGS` in server.js. The switcher builds itself from `I18N`.
 - **New setting:** read it from `env` at the top of server.js, document it in `.env.example` and both READMEs.
 
