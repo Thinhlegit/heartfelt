@@ -201,47 +201,54 @@ window.HF = {
     return art ? `<div class="buddy buddy-${id}" aria-hidden="true"><svg viewBox="0 0 100 100">${art}</svg></div>` : '';
   },
   buddyArt: (() => {
-    const S = 'stroke="#3a2f25" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"';
+    const K = '#3a2f25';
+    const S = `stroke="${K}" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"`;
     const heart = (x, y) => `<path class="accent" d="M${x} ${y}c-2-4-8-3-8 2 0 4 8 9 8 9s8-5 8-9c0-5-6-6-8-2z" ${S}/>`;
-    const shadow = '<ellipse cx="50" cy="96" rx="22" ry="3" fill="#000" fill-opacity=".1"/>';
-    const body = fill => `<path d="M32 93c-2-14 4-27 18-27s20 13 18 27z" fill="${fill}" ${S}/>`;
-    const arm = `<path d="M34 77c-5 3-6 9-3 12" fill="none" ${S}/>`;
-    const wave = `<g class="wave"><path d="M66 77c6-3 10-9 12-16" fill="none" ${S}/>${heart(80, 50)}</g>`;
-    const cheeks = (y, o = '.5') => `<circle cx="35" cy="${y}" r="3.2" fill="#e8846b" fill-opacity="${o}"/><circle cx="65" cy="${y}" r="3.2" fill="#e8846b" fill-opacity="${o}"/>`;
-    const eyes = (y, ry = 2.4) => `<g class="eyes"><ellipse cx="41" cy="${y}" rx="2.4" ry="${ry}" fill="#3a2f25"/><ellipse cx="59" cy="${y}" rx="2.4" ry="${ry}" fill="#3a2f25"/></g>`;
+    const shadow = '<ellipse cx="50" cy="96.5" rx="24" ry="3" fill="#000" fill-opacity=".1"/>';
+    // Tiny body, stubby feet and a resting arm (drawn before the head so the chin overlaps).
+    const body = (fill, belly) => `<path d="M35 94c-2-13 3-25 15-25s17 12 15 25z" fill="${fill}" ${S}/>` +
+      (belly ? `<ellipse cx="50" cy="84" rx="8" ry="7" fill="${belly}"/>` : '') +
+      `<ellipse cx="40" cy="94" rx="6.5" ry="3.6" fill="${fill}" ${S}/><ellipse cx="60" cy="94" rx="6.5" ry="3.6" fill="${fill}" ${S}/>` +
+      `<path d="M37 79c-5 1-6 7-3 10" fill="none" ${S}/>`;
+    // Waving arm: shoulder at the group's bottom-left (the CSS rotates around it).
+    const wave = `<g class="wave"><path d="M63 82c7-1 12-6 15-13" fill="none" ${S}/>${heart(84, 55)}</g>`;
+    const cheeks = (y, o = '.5') => `<ellipse cx="31" cy="${y}" rx="4.2" ry="3" fill="#f08a8a" fill-opacity="${o}"/><ellipse cx="69" cy="${y}" rx="4.2" ry="3" fill="#f08a8a" fill-opacity="${o}"/>`;
+    const eye = (x, y) => `<ellipse cx="${x}" cy="${y}" rx="5.4" ry="6.4" fill="${K}"/><circle cx="${x - 1.8}" cy="${y - 2.4}" r="2.2" fill="#fff"/><circle cx="${x + 2}" cy="${y + 2.6}" r="1" fill="#fff"/>`;
+    const eyes = y => `<g class="eyes">${eye(36, y)}${eye(64, y)}</g>`;
+    const smile = (y) => `<path d="M46.5 ${y}c1.5 2 5.5 2 7 0" fill="none" ${S}/>`;
     return {
-      bear: shadow + body('#c38d63') + '<ellipse cx="50" cy="84" rx="9" ry="8" fill="#ecc9a3"/>' + arm +
-        `<circle cx="32" cy="24" r="8" fill="#c38d63" ${S}/><circle cx="68" cy="24" r="8" fill="#c38d63" ${S}/>` +
-        '<circle cx="32" cy="24" r="3.5" fill="#ecc9a3"/><circle cx="68" cy="24" r="3.5" fill="#ecc9a3"/>' +
-        `<circle cx="50" cy="42" r="22" fill="#c38d63" ${S}/><ellipse cx="50" cy="50" rx="10" ry="7.5" fill="#ecc9a3" ${S}/>` +
-        `<ellipse cx="50" cy="46.5" rx="3.2" ry="2.3" fill="#3a2f25"/><path d="M50 49v3m-4 1c2 2 6 2 8 0" fill="none" ${S}/>` +
-        eyes(39) + cheeks(47) + wave,
+      bear: shadow + body('#c38d63', '#ecc9a3') +
+        `<circle cx="26" cy="15" r="9" fill="#c38d63" ${S}/><circle cx="74" cy="15" r="9" fill="#c38d63" ${S}/>` +
+        '<circle cx="26" cy="15" r="4" fill="#ecc9a3"/><circle cx="74" cy="15" r="4" fill="#ecc9a3"/>' +
+        `<circle cx="50" cy="39" r="31" fill="#c38d63" ${S}/><ellipse cx="50" cy="54" rx="11" ry="8" fill="#ecc9a3" ${S}/>` +
+        `<ellipse cx="50" cy="51" rx="3.4" ry="2.4" fill="${K}"/><path d="M50 53v2" fill="none" ${S}/>` + smile(55) +
+        eyes(46) + cheeks(56) + wave,
       cat: shadow +
-        '<path d="M66 91c12 0 16-10 10-19" fill="none" stroke="#3a2f25" stroke-width="7.4" stroke-linecap="round"/>' +
-        '<path d="M66 91c12 0 16-10 10-19" fill="none" stroke="#e9a35b" stroke-width="4.4" stroke-linecap="round"/>' +
-        body('#e9a35b') + '<ellipse cx="50" cy="84" rx="9" ry="8" fill="#fbe3c4"/>' + arm +
-        `<path d="M29 33l2-19 15 9z" fill="#e9a35b" ${S}/><path d="M71 33l-2-19-15 9z" fill="#e9a35b" ${S}/>` +
-        '<path d="M33 28l1-8 6 4z" fill="#f4b6a6"/><path d="M67 28l-1-8-6 4z" fill="#f4b6a6"/>' +
-        `<ellipse cx="50" cy="43" rx="23" ry="20" fill="#e9a35b" ${S}/>` +
-        '<path d="M50 24v6M44 25l1 5M56 25l-1 5" fill="none" stroke="#b86f2c" stroke-width="2.2" stroke-linecap="round"/>' +
-        eyes(42, 3.2) + `<path d="M47.5 47h5l-2.5 3z" fill="#e8846b" stroke="#3a2f25" stroke-width="1.6" stroke-linejoin="round"/>` +
-        `<path d="M50 50c-1 2.5-4 2.5-5 1M50 50c1 2.5 4 2.5 5 1" fill="none" ${S}/>` +
-        '<path d="M30 47l-9-2M30 51l-9 1M70 47l9-2M70 51l9 1" fill="none" stroke="#3a2f25" stroke-width="1.6" stroke-linecap="round"/>' +
-        cheeks(49, '.35') + wave,
-      bunny: shadow + body('#f7f1ea') + '<ellipse cx="50" cy="84" rx="9" ry="8" fill="#ffffff"/>' + arm +
-        `<path d="M39 28c-6-14-5-25 1-25s9 11 5 25" fill="#f7f1ea" ${S}/><path d="M61 28c6-14 5-25-1-25s-9 11-5 25" fill="#f7f1ea" ${S}/>` +
-        '<path d="M41 23c-3-9-2-15 0-15s3 6 2 15" fill="#f4b6a6"/><path d="M59 23c3-9 2-15 0-15s-3 6-2 15" fill="#f4b6a6"/>' +
-        `<circle cx="50" cy="45" r="21" fill="#f7f1ea" ${S}/>` +
-        eyes(43) + '<ellipse cx="50" cy="49.5" rx="2.6" ry="2" fill="#e8846b"/>' +
-        `<path d="M50 51.5v2m-3.5 1c1.5 1.5 5.5 1.5 7 0" fill="none" ${S}/>` + cheeks(50, '.6') + wave,
+        `<path d="M64 90c13 1 17-9 11-17" fill="none" stroke="${K}" stroke-width="7.4" stroke-linecap="round"/>` +
+        '<path d="M64 90c13 1 17-9 11-17" fill="none" stroke="#e9a35b" stroke-width="4.4" stroke-linecap="round"/>' +
+        body('#e9a35b', '#fbe3c4') +
+        `<path d="M21 31l1-24 20 9z" fill="#e9a35b" ${S}/><path d="M79 31l-1-24-20 9z" fill="#e9a35b" ${S}/>` +
+        '<path d="M26 24l1-11 8 4z" fill="#f4b6a6"/><path d="M74 24l-1-11-8 4z" fill="#f4b6a6"/>' +
+        `<circle cx="50" cy="39" r="31" fill="#e9a35b" ${S}/>` +
+        '<path d="M50 11v7M43 12l1.5 6M57 12l-1.5 6" fill="none" stroke="#b86f2c" stroke-width="2.2" stroke-linecap="round"/>' +
+        eyes(46) + `<path d="M47.5 51h5l-2.5 2.6z" fill="#e8846b" stroke="${K}" stroke-width="1.6" stroke-linejoin="round"/>` +
+        `<path d="M50 53.6c-.5 2.6-4.5 2.6-5 .4M50 53.6c.5 2.6 4.5 2.6 5 .4" fill="none" ${S}/>` +
+        `<path d="M22 50l-10-2M22 54l-10 2M78 50l10-2M78 54l10 2" fill="none" stroke="${K}" stroke-width="1.6" stroke-linecap="round"/>` +
+        cheeks(57, '.4') + wave,
+      bunny: shadow + body('#f7f1ea', '#ffffff') +
+        `<path d="M33 24c-8-14-7-22-1-23s11 9 11 22" fill="#f7f1ea" ${S}/><path d="M67 24c8-14 7-22 1-23s-11 9-11 22" fill="#f7f1ea" ${S}/>` +
+        '<path d="M33.5 20c-4-9-3-14-1-14.5s5 5 5 14" fill="#f4b6a6"/><path d="M66.5 20c4-9 3-14 1-14.5s-5 5-5 14" fill="#f4b6a6"/>' +
+        `<circle cx="50" cy="44" r="29" fill="#f7f1ea" ${S}/>` +
+        eyes(50) + '<ellipse cx="50" cy="55" rx="2.8" ry="2" fill="#e8846b"/>' +
+        `<path d="M50 57v1.5m-3.5.5c1.5 1.8 5.5 1.8 7 0" fill="none" ${S}/>` + cheeks(60, '.55') + wave,
       chick: shadow +
-        '<path d="M42 91v5m-3 0h6M58 91v5m-3 0h6" fill="none" stroke="#ef8a3c" stroke-width="2.4" stroke-linecap="round"/>' +
-        `<path d="M50 22c18 0 28 16 28 36s-10 34-28 34-28-14-28-34 10-36 28-36z" fill="#f6cf4e" ${S}/>` +
-        `<path d="M48 22c-2-6 1-10 4-11M51 22c1-5 5-7 8-6" fill="none" ${S}/>` +
-        `<path d="M25 62c-6 4-6 12-1 15 4-3 5-10 1-15z" fill="#efbd2f" ${S}/>` +
-        eyes(45) + `<path d="M46 52l4 5 4-5z" fill="#ef8a3c" stroke="#3a2f25" stroke-width="1.8" stroke-linejoin="round"/>` +
-        cheeks(54, '.45') +
-        `<g class="wave"><path d="M75 63c8-2 11-8 11-14" fill="none" ${S}/>${heart(86, 38)}</g>`,
+        '<path d="M41 91v4m-3 1h6M59 91v4m-3 1h6" fill="none" stroke="#ef8a3c" stroke-width="2.4" stroke-linecap="round"/>' +
+        `<path d="M36 94c-2-13 3-25 14-25s16 12 14 25z" fill="#f6cf4e" ${S}/><ellipse cx="50" cy="85" rx="8" ry="6.5" fill="#fbe9a0"/>` +
+        `<path d="M37 79c-5 1-6 7-3 10" fill="none" ${S}/>` +
+        `<circle cx="50" cy="39" r="31" fill="#f6cf4e" ${S}/>` +
+        `<path d="M46 9c-3-6-1-8 2-7M50 8c0-6 4-8 7-6M54 9c3-4 6-4 8-2" fill="none" ${S}/>` +
+        eyes(46) + `<path d="M45.500 51.500c2-1.500 7-1.500 9 0l-4.500 5z" fill="#ef8a3c" stroke="${K}" stroke-width="1.8" stroke-linejoin="round"/>` +
+        cheeks(57, '.45') + wave,
     };
   })(),
 
