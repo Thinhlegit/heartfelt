@@ -1,0 +1,17 @@
+# HTTPS in front of Heartfelt. Caddy gets and renews the certificate for $DOMAIN automatically.
+{
+	# Don't try to add Caddy's local CA to the (read-only) container trust store
+	skip_install_trust
+}
+
+{$DOMAIN}
+
+encode zstd gzip
+
+request_body {
+	max_size 160MB
+}
+
+header -Server
+
+reverse_proxy heartfelt:3000

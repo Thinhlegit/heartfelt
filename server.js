@@ -371,7 +371,11 @@ app.use((err, req, res, next) => {
   res.status(500).json({ code: 'generic', error: 'Something went wrong.' });
 });
 
-const server = app.listen(PORT, () => console.log(`Heartfelt running at http://localhost:${PORT}${PROD ? ' (production)' : ''}`));
+const server = app.listen(PORT, () => {
+  console.log(`Heartfelt running at http://localhost:${PORT}${PROD ? ' (production)' : ''}`);
+  if (ADMIN_TOKEN && ADMIN_TOKEN.length < 16) console.warn('ADMIN_TOKEN is shorter than 16 characters, so moderation is turned off.');
+  else console.log(ADMIN_TOKEN ? 'Moderation: on' : 'Moderation: off (set ADMIN_TOKEN in .env to turn it on)');
+});
 server.requestTimeout = 120 * 1000; // slow uploads get cut off instead of holding connections open
 server.headersTimeout = 20 * 1000;
 

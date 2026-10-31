@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+### Easier setup
+- `./setup.sh`: one command that creates `.env`, generates an admin token, and starts Heartfelt with Docker (or Node.js if Docker isn't installed)
+- `./setup.sh --domain example.com`: public site with automatic HTTPS (Caddy, free auto-renewing certificate)
+- All settings in one `.env` file, read by both Docker and `npm start`
+- `npm run dev` for working on the code
+
 ## 1.0.0 — 2026-10-31
 
 First release.

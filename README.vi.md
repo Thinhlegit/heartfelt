@@ -19,57 +19,70 @@ Bản nháp được tự động lưu trên máy bạn, và người gửi có 
 ## Bắt đầu nhanh
 
 ```bash
-npm install
-npm start
+git clone https://github.com/Thinhlegit/heartfelt.git
+cd heartfelt
+./setup.sh
 ```
 
-Mở http://localhost:3000.
+Mở http://localhost:3000. Vậy là xong.
 
-Hoặc dùng Docker:
+Script sẽ tạo tệp cài đặt (`.env`), tạo mã quản trị, rồi chạy Heartfelt bằng Docker, hoặc bằng Node.js 22+ nếu máy chưa có Docker. Chạy lại bao nhiêu lần cũng được; cài đặt và thiệp của bạn vẫn được giữ nguyên.
+
+## Đưa lên mạng với HTTPS
+
+1. Trỏ tên miền về máy chủ của bạn (bản ghi DNS `A`) và mở cổng 80 và 443.
+2. Chạy:
 
 ```bash
-docker compose up -d --build
+./setup.sh --domain thiep.example.com
 ```
 
-Micro chỉ hoạt động trên `localhost` hoặc qua HTTPS.
+Heartfelt sẽ chạy tại `https://thiep.example.com`, với chứng chỉ miễn phí tự gia hạn.
 
-## Đưa lên mạng
+## Lệnh thường dùng
 
-Chạy sau HTTPS (Caddy, nginx, hoặc dịch vụ như Render, Fly) và đặt:
+| Để | Chạy |
+| --- | --- |
+| Cập nhật | `git pull && ./setup.sh` |
+| Xem log | `docker compose logs -f` |
+| Dừng | `docker compose --profile https down` |
+| Sửa code | `npm install && npm run dev` |
 
-```bash
-NODE_ENV=production TRUST_PROXY=1 ADMIN_TOKEN="$(openssl rand -hex 24)" npm start
-```
+## Cài đặt
 
-| Biến | Mặc định | Công dụng |
+Mọi cài đặt nằm trong `.env`. Sửa giá trị, rồi chạy lại `./setup.sh`.
+
+| Cài đặt | Mặc định | Công dụng |
 | --- | --- | --- |
-| `NODE_ENV` | | `production` bật HSTS và tự chuyển sang HTTPS |
-| `TRUST_PROXY` | tắt | Số proxy đứng trước ứng dụng (thường là `1`), để giới hạn truy cập nhận đúng IP người dùng |
-| `ADMIN_TOKEN` | tắt | Mã bí mật (16 ký tự trở lên) để kiểm duyệt thiệp |
-| `CREATE_LIMIT` | `10` | Số thiệp mỗi IP được tạo trong 15 phút |
+| `DOMAIN` | trống | Tên miền công khai. Để trống là chỉ chạy trên máy này |
+| `ADMIN_TOKEN` | tự tạo | Mã bí mật để kiểm duyệt thiệp. Giữ kín |
+| `CREATE_LIMIT` | `10` | Số thiệp mỗi người được tạo trong 15 phút |
 | `MAX_STORAGE_MB` | `2048` | Tạm ngừng nhận tệp khi đã dùng chừng này dung lượng |
 | `REPORT_HIDE_AT` | `3` | Số lượt báo cáo để ẩn thiệp khỏi Bức tường yêu thương |
-| `PORT` | `3000` | Cổng chạy ứng dụng |
 
-### Kiểm duyệt
+Chạy bằng Node sau proxy của riêng bạn thay vì Docker? Thêm cả `NODE_ENV=production` và `TRUST_PROXY=1`.
 
-Người xem có thể báo cáo thiệp trên Bức tường yêu thương; khi đủ số lượt báo cáo, thiệp bị ẩn khỏi bức tường (link riêng vẫn mở được). Khi đã đặt `ADMIN_TOKEN`:
+## Kiểm duyệt
+
+Người xem có thể báo cáo thiệp trên Bức tường yêu thương; khi đủ số lượt báo cáo, thiệp bị ẩn khỏi bức tường (link riêng vẫn mở được). Xem và xóa thiệp bằng mã quản trị:
 
 ```bash
-curl -H "x-admin-token: $ADMIN_TOKEN" https://trang-cua-ban/api/admin/reported
+curl -H "x-admin-token: MA_QUAN_TRI" https://thiep.example.com/api/admin/reported
 ```
 
 ```bash
-curl -X DELETE -H "x-admin-token: $ADMIN_TOKEN" https://trang-cua-ban/api/cards/MA_THIEP
+curl -X DELETE -H "x-admin-token: MA_QUAN_TRI" https://thiep.example.com/api/cards/MA_THIEP
 ```
 
-### Sao lưu
+## Sao lưu
 
-Mọi dữ liệu nằm trong `data/` (thiệp) và `uploads/` (tệp). Với Docker, đó là hai volume `heartfelt-data` và `heartfelt-uploads`:
+Thiệp và tệp tải lên được lưu trong hai volume Docker. Để lưu chúng vào `backup.tgz`:
 
 ```bash
 docker run --rm -v heartfelt_heartfelt-data:/d -v heartfelt_heartfelt-uploads:/u -v "$PWD":/out busybox tar czf /out/backup.tgz -C / d u
 ```
+
+Nếu không dùng Docker, hãy sao lưu hai thư mục `data/` và `uploads/`.
 
 ## Bảo mật
 
@@ -79,15 +92,12 @@ docker run --rm -v heartfelt_heartfelt-data:/d -v heartfelt_heartfelt-uploads:/u
 - Link thiệp khó đoán; thiệp riêng tư không xuất hiện trên công cụ tìm kiếm
 - Image Docker: distroless (không có shell), không chạy bằng root, hệ thống tệp chỉ đọc, không có quyền Linux đặc biệt, khoảng 50 MB
 
-Build sau một proxy có kiểm tra HTTPS? Truyền chứng chỉ của proxy dưới dạng build secret (không lưu lại trong image):
-
-```bash
-docker build --secret id=ca,src=proxy-ca.crt -t heartfelt .
-```
+Build sau một proxy có kiểm tra HTTPS? Truyền chứng chỉ của proxy dưới dạng build secret (không lưu lại trong image): `docker build --secret id=ca,src=proxy-ca.crt -t heartfelt .`
 
 ## Cấu trúc dự án
 
 ```
+setup.sh            Cài đặt một bước
 server.js           API, tải tệp, bảo mật
 public/index.html   Tạo thiệp            (create.js)
 public/card.html    Mở thiệp             (card.js)

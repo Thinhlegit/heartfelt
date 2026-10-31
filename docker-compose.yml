@@ -1,16 +1,21 @@
-# Run with:  ADMIN_TOKEN=$(openssl rand -hex 24) docker compose up -d --build
+# Easiest way to run this: ./setup.sh
+# By hand: cp .env.example .env, fill it in, then
+#   docker compose up -d --build                     # this computer only, http://localhost:3000
+#   docker compose --profile https up -d --build     # public, HTTPS on $DOMAIN
+
 services:
   heartfelt:
     build: .
     image: heartfelt:latest
     restart: unless-stopped
-    ports:
-      - "127.0.0.1:3000:3000"   # only reachable from this machine; put an HTTPS proxy in front
+    env_file:
+      - path: .env
+        required: false
     environment:
       NODE_ENV: production
-      TRUST_PROXY: "1"           # set to 0/remove if nothing sits in front of the container
-      ADMIN_TOKEN: ${ADMIN_TOKEN:-}
-      MAX_STORAGE_MB: "2048"
+      TRUST_PROXY: "1"
+    ports:
+      - "127.0.0.1:3000:3000"   # only reachable from this machine; Caddy handles public traffic
     volumes:
       - heartfelt-data:/app/data
       - heartfelt-uploads:/app/uploads
@@ -25,12 +30,40 @@ services:
     pids_limit: 100
     mem_limit: 512m
     cpus: 1.0
-    logging:
+    logging: &logging
       driver: json-file
       options:
         max-size: "10m"
         max-file: "3"
 
+  # HTTPS with automatic certificates. Only starts with --profile https.
+  caddy:
+    image: caddy:2-alpine@sha256:e70b164da81ef698b3ad19af799ea6086ce6d9e48ed4079eb9fe26f6fbf14ee5
+    profiles: [https]
+    restart: unless-stopped
+    depends_on: [heartfelt]
+    environment:
+      DOMAIN: ${DOMAIN:-localhost}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m
+    cap_drop: [ALL]
+    cap_add: [NET_BIND_SERVICE]
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 256m
+    logging: *logging
+
 volumes:
   heartfelt-data:
   heartfelt-uploads:
+  caddy-data:
+  caddy-config:

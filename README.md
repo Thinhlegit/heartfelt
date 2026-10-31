@@ -19,57 +19,70 @@ Drafts save automatically on your device, and the sender can delete a card later
 ## Quick start
 
 ```bash
-npm install
-npm start
+git clone https://github.com/Thinhlegit/heartfelt.git
+cd heartfelt
+./setup.sh
 ```
 
-Open http://localhost:3000.
+Open http://localhost:3000. That's it.
 
-Or with Docker:
+The script creates your settings file (`.env`), generates an admin token, and starts Heartfelt with Docker, or with Node.js 22+ if Docker isn't installed. It's safe to run again; your settings and cards are kept.
+
+## Go live with HTTPS
+
+1. Point your domain at your server (a DNS `A` record) and open ports 80 and 443.
+2. Run:
 
 ```bash
-docker compose up -d --build
+./setup.sh --domain cards.example.com
 ```
 
-The microphone only works on `localhost` or over HTTPS.
+Heartfelt is now on `https://cards.example.com`, with a free certificate that renews by itself.
 
-## Going live
+## Everyday commands
 
-Run it behind HTTPS (Caddy, nginx, or a host like Render or Fly) and set:
+| To | Run |
+| --- | --- |
+| Update | `git pull && ./setup.sh` |
+| See logs | `docker compose logs -f` |
+| Stop | `docker compose --profile https down` |
+| Work on the code | `npm install && npm run dev` |
 
-```bash
-NODE_ENV=production TRUST_PROXY=1 ADMIN_TOKEN="$(openssl rand -hex 24)" npm start
-```
+## Settings
 
-| Variable | Default | Purpose |
+Everything lives in `.env`. Change a value, then run `./setup.sh` again.
+
+| Setting | Default | What it does |
 | --- | --- | --- |
-| `NODE_ENV` | | `production` enables HSTS and HTTPS upgrades |
-| `TRUST_PROXY` | off | Proxies in front of the app (usually `1`), so rate limits see real visitor IPs |
-| `ADMIN_TOKEN` | off | Secret (16+ characters) for moderating cards |
-| `CREATE_LIMIT` | `10` | Cards per IP per 15 minutes |
+| `DOMAIN` | empty | Your public domain. Empty means this computer only |
+| `ADMIN_TOKEN` | generated | Secret for moderating cards. Keep it private |
+| `CREATE_LIMIT` | `10` | Cards one visitor can create per 15 minutes |
 | `MAX_STORAGE_MB` | `2048` | Uploads pause once this much disk is used |
-| `REPORT_HIDE_AT` | `3` | Reports needed to hide a card from the Love wall |
-| `PORT` | `3000` | Port to listen on |
+| `REPORT_HIDE_AT` | `3` | Reports that hide a card from the Love wall |
 
-### Moderation
+Running with Node behind your own proxy instead of Docker? Also add `NODE_ENV=production` and `TRUST_PROXY=1`.
 
-Visitors can report cards on the Love wall; after enough reports a card is hidden from the wall (its private link still works). With `ADMIN_TOKEN` set:
+## Moderation
+
+Visitors can report cards on the Love wall; after enough reports a card is hidden from the wall (its private link still works). Review and remove cards with your admin token:
 
 ```bash
-curl -H "x-admin-token: $ADMIN_TOKEN" https://your-site/api/admin/reported
+curl -H "x-admin-token: YOUR_TOKEN" https://cards.example.com/api/admin/reported
 ```
 
 ```bash
-curl -X DELETE -H "x-admin-token: $ADMIN_TOKEN" https://your-site/api/cards/CARD_ID
+curl -X DELETE -H "x-admin-token: YOUR_TOKEN" https://cards.example.com/api/cards/CARD_ID
 ```
 
-### Backups
+## Backups
 
-Everything lives in `data/` (cards) and `uploads/` (files). With Docker, these are the `heartfelt-data` and `heartfelt-uploads` volumes:
+Cards and uploads are stored in two Docker volumes. To save them to `backup.tgz`:
 
 ```bash
 docker run --rm -v heartfelt_heartfelt-data:/d -v heartfelt_heartfelt-uploads:/u -v "$PWD":/out busybox tar czf /out/backup.tgz -C / d u
 ```
+
+Without Docker, back up the `data/` and `uploads/` folders.
 
 ## Security
 
@@ -79,15 +92,12 @@ docker run --rm -v heartfelt_heartfelt-data:/d -v heartfelt_heartfelt-uploads:/u
 - Hard-to-guess card links; private cards are hidden from search engines
 - Docker image: distroless (no shell), non-root, read-only filesystem, no Linux capabilities, about 50 MB
 
-Building behind a proxy that inspects HTTPS? Pass its certificate as a build secret (it's not kept in the image):
-
-```bash
-docker build --secret id=ca,src=proxy-ca.crt -t heartfelt .
-```
+Building behind a proxy that inspects HTTPS? Pass its certificate as a build secret (it isn't kept in the image): `docker build --secret id=ca,src=proxy-ca.crt -t heartfelt .`
 
 ## Project layout
 
 ```
+setup.sh            One-step setup
 server.js           API, uploads, security
 public/index.html   Create a card       (create.js)
 public/card.html    Open a card         (card.js)
