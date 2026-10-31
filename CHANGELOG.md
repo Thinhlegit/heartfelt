@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### New
+- **3D card** opening effect: the card arrives closed and its cover swings open on a hinge, then tilts gently with the mouse
+- **Little friends**: add a chibi bear, cat, bunny or chick to a card; they wave a heart in the card's colour and blink
+
 ### Fixes
 - Windows/WSL: files are always checked out with Linux line endings, so `./setup.sh` runs and `git pull` isn't blocked by phantom changes
 - A `.env` edited in a Windows editor now works

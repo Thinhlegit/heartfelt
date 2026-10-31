@@ -47,7 +47,8 @@ let storageUsed = fs.readdirSync(UPLOAD_DIR).reduce((sum, f) => {
 const RELATIONSHIPS = ['love', 'family', 'parents', 'friend', 'coworker', 'teacher', 'other'];
 const DESIGNS = ['classic', 'polaroid', 'elegant', 'confetti', 'minimal', 'postcard'];
 const LANGS = ['en', 'vi'];
-const EFFECTS = ['confetti', 'fireworks', 'none'];
+const EFFECTS = ['confetti', 'fireworks', 'fold3d', 'none'];
+const CHARACTERS = ['none', 'bear', 'cat', 'bunny', 'chick'];
 const OCCASIONS = ['love', 'birthday', 'anniversary', 'congrats', 'thankyou', 'celebration', 'getwell', 'justbecause'];
 
 const ID_RE = /^[A-Za-z0-9_-]{8,16}$/;
@@ -237,6 +238,7 @@ app.post('/api/cards', createLimit, cardUpload, (req, res) => {
     occasion: OCCASIONS.includes(b.occasion) ? b.occasion : 'justbecause',
     design: DESIGNS.includes(b.design) ? b.design : 'classic',
     effect: EFFECTS.includes(b.effect) ? b.effect : 'confetti',
+    character: CHARACTERS.includes(b.character) ? b.character : 'none',
     message: cleanMessage(b.message),
     lang: LANGS.includes(b.lang) ? b.lang : 'en',
     isPublic: b.isPublic === 'true',

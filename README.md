@@ -10,7 +10,7 @@ English and Vietnamese.
 
 - **Write** a message, or start from a suggested line for the occasion
 - **Add** a photo or video, a voice note recorded in the browser, and a hand-drawn signature
-- **Style** it: 8 occasions, 6 card designs, and confetti, fireworks or nothing when it opens
+- **Style** it: 8 occasions, 6 card designs, a little chibi friend (bear, cat, bunny or chick), and confetti, fireworks or a 3D card that swings open
 - **Share** a private link, or also pin the card to the public **Love wall**
 - **Receive**: the recipient opens the envelope and can send hearts back
 

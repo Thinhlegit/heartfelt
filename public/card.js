@@ -89,7 +89,9 @@ function showCard() {
   view = 'open';
   root.innerHTML = `<div class="reveal">${HF.renderCard(card)}</div><div class="actions" id="actions"></div>`;
   drawActions();
-  HF.playEffect(card.effect || 'confetti', HF.occasion(card.occasion));
+  const effect = card.effect || 'confetti';
+  HF.playEffect(effect, HF.occasion(card.occasion), root.querySelector('.reveal'), card);
+  if (effect === 'fold3d') HF.tilt(root.querySelector('.reveal'));
   const v = root.querySelector('.media video');
   if (v) v.play().catch(() => {});
 }

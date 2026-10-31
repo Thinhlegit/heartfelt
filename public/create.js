@@ -1,7 +1,7 @@
 const $ = id => document.getElementById(id);
 const t = (k, v) => i18n.t(k, v);
 const state = {
-  relationship: 'love', occasion: 'love', design: 'classic', effect: 'confetti',
+  relationship: 'love', occasion: 'love', design: 'classic', effect: 'confetti', character: 'none',
   media: null, mediaUrl: null, voice: null, voiceUrl: null, signature: null, signatureUrl: null, error: '',
 };
 const MAX_REC_MS = 3 * 60 * 1000;
@@ -25,7 +25,7 @@ function announce(key) {
 // ---- Draft: restore before anything renders ----
 const draft = store.get('hf-draft');
 if (draft) {
-  for (const k of ['relationship', 'occasion', 'design', 'effect']) if (typeof draft[k] === 'string') state[k] = draft[k];
+  for (const k of ['relationship', 'occasion', 'design', 'effect', 'character']) if (typeof draft[k] === 'string') state[k] = draft[k];
   $('to').value = draft.to || '';
   $('message').value = draft.message || '';
   $('isPublic').checked = !!draft.isPublic;
@@ -75,13 +75,40 @@ designTiles.addEventListener('click', e => {
 drawDesigns();
 i18n.onChange(drawDesigns);
 
+// ---- Little friend (character) tiles ----
+const buddyTiles = $('buddyTiles');
+function drawBuddies() {
+  buddyTiles.innerHTML = HF.characters.map(ch =>
+    `<button type="button" class="buddy-tile" data-id="${ch.id}" aria-pressed="${ch.id === state.character}">` +
+    `<span class="buddy-swatch">${HF.buddy(ch.id) || '<span class="buddy-none"></span>'}</span>` +
+    `<span class="name">${HF.esc(t('character.' + ch.id))}</span></button>`
+  ).join('');
+}
+buddyTiles.addEventListener('click', e => {
+  const btn = e.target.closest('.buddy-tile');
+  if (!btn || state.character === btn.dataset.id) return;
+  state.character = btn.dataset.id;
+  buddyTiles.querySelectorAll('.buddy-tile').forEach(c => c.setAttribute('aria-pressed', c === btn));
+  transition(render);
+  saveDraft();
+});
+drawBuddies();
+i18n.onChange(drawBuddies);
+
 // ---- Opening effect preview ----
 function drawPlay() {
   const btn = $('playEffect');
   btn.innerHTML = HF.icon('play') + `<span>${HF.esc(t('effect.play'))}</span>`;
   btn.hidden = state.effect === 'none';
 }
-$('playEffect').addEventListener('click', () => HF.playEffect(state.effect, HF.occasion(state.occasion)));
+$('playEffect').addEventListener('click', () => {
+  const occ = HF.occasion(state.occasion);
+  if (state.effect !== 'fold3d') return HF.playEffect(state.effect, occ);
+  // The 3D effect plays on the preview card itself; on phones that lives in the sheet
+  if (getComputedStyle($('desk')).display === 'none') setSheet(true);
+  render();
+  HF.playEffect('fold3d', occ, $('preview'), previewCard());
+});
 
 // ---- Starter lines for the message ----
 function drawSuggest() {
@@ -103,8 +130,12 @@ $('suggest').addEventListener('click', e => {
 // ---- Live preview ----
 function render() {
   HF.applyTheme(document.documentElement, HF.occasion(state.occasion));
+  $('preview').innerHTML = HF.renderCard(previewCard());
+  $('count').textContent = $('message').value.length;
+}
+function previewCard() {
   const hasExtras = state.media || state.voice;
-  $('preview').innerHTML = HF.renderCard({
+  return {
     lang: i18n.lang,
     to: $('to').value.trim(),
     from: $('from').value.trim(),
@@ -115,8 +146,8 @@ function render() {
     media: state.media ? { url: state.mediaUrl, kind: state.media.type.startsWith('video') ? 'video' : 'image' } : null,
     voice: state.voice ? { url: state.voiceUrl } : null,
     signature: state.signature ? { url: state.signatureUrl } : null,
-  });
-  $('count').textContent = $('message').value.length;
+    character: state.character,
+  };
 }
 ['to', 'from', 'message'].forEach(id => $(id).addEventListener('input', () => { render(); saveDraft(); }));
 $('to').addEventListener('input', () => { if (state.error === 'err.noRecipient' && $('to').value.trim()) showError(''); });
@@ -128,7 +159,7 @@ function saveDraft() {
   draftTimer = setTimeout(() => {
     store.set('hf-draft', {
       to: $('to').value, from: $('from').value, message: $('message').value, isPublic: $('isPublic').checked,
-      relationship: state.relationship, occasion: state.occasion, design: state.design, effect: state.effect,
+      relationship: state.relationship, occasion: state.occasion, design: state.design, effect: state.effect, character: state.character,
     });
     showNote('draft.saved');
   }, 600);
@@ -450,6 +481,7 @@ $('form').addEventListener('submit', async e => {
   fd.append('occasion', state.occasion);
   fd.append('design', state.design);
   fd.append('effect', state.effect);
+  fd.append('character', state.character);
   fd.append('lang', i18n.lang);
   fd.append('isPublic', $('isPublic').checked);
   if (state.media) fd.append('media', state.media);
@@ -502,7 +534,7 @@ function showDone(to, url, path) {
   window.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' });
   $('doneTitle').setAttribute('tabindex', '-1');
   $('doneTitle').focus({ preventScroll: true });
-  HF.playEffect(state.effect === 'none' ? 'confetti' : state.effect, HF.occasion(state.occasion));
+  HF.playEffect(['none', 'fold3d'].includes(state.effect) ? 'confetti' : state.effect, HF.occasion(state.occasion));
 }
 
 $('copyBtn').addEventListener('click', async () => {
